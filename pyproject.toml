@@ -1,0 +1,102 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pfas_assessment_europe"
+description = " "
+version = "0.0.1"
+
+dependencies = [
+#     "adjustText",
+#     "umap-learn",
+    "factor_analyzer == 0.5.1",
+#     "tabulate",
+#     "python-Levenshtein",
+#     "fuzzywuzzy",
+#     "numpy",
+    "geopandas == 1.0.1",
+    "pandas == 2.2.3",
+    "pyarrow",
+#     "pysal",
+#     "contextily",
+#     "h3",
+#     "xarray",
+#     "rioxarray",
+#     "ipykernel",
+#     "dask",
+#     "dask_geopandas",
+#     "notebook",
+#     "bokeh",
+#     "netCDF4",
+#     "cartopy",
+#     "plotly",
+#     "python-ternary",
+#     "mpltern",
+#     "shap"
+]
+
+requires-python = ">= 3.14"
+
+authors = [
+  {name = "Robin Schröder", email = "robin.schroeder94@googlemail.com"}
+]
+
+maintainers = [
+  {name = "Robin Schröder", email = "robin.schroeder94@googlemail.com"}
+]
+
+readme = "README.md"
+
+license = { file = "LICENSE" }
+
+keywords = ["hydrology", "water quality", "europe"]
+
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License"
+]
+
+[project.optional-dependencies]
+
+dev = [
+    # "pytest",
+    # "pytest-cov",
+    "black",
+    "isort",
+    "flake8",
+    "Flake8-pyproject"
+]
+
+# docs = [
+#     "sphinx", 
+#     "myst-parser", 
+#     "sphinxcontrib-napoleon", 
+#     "furo", 
+#     "sphinx-copybutton",
+#     "nbsphinx",
+#     "sphinx-collections"
+# ]
+
+# [tool.pytest.ini_options]
+# markers = [
+#     "slow: marks tests as slow",
+#     "fast: marks tests as fast"
+# ]
+
+# testpaths = ["tests"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = true
+use_parentheses = true
+ensure_newline_before_comments = true
+
+[tool.flake8]
+max-line-length = 88
+max-complexity = 18
+extend-ignore = ["E203", "E266", "E501", "W503", "F601"]
+exclude = [".venv"]
