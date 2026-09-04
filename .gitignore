@@ -1,3 +1,8 @@
+results/
+logs/
+CITATION.cff
+CITATION.md
+
 data/input/*
 .vscode/
 

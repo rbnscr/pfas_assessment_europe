@@ -1,5 +1,8 @@
 # research_pfas_in_europe
 
+## How to run the code
+
+
 ## Input data directory
 
 This directory should contain the following files:
@@ -8,8 +11,12 @@ This directory should contain the following files:
 | ------------------------ | ----------------------------------------------------------------- | ---------------------------------------------------- |
 | `pfas_data.gpkg`         | GeoPackage containing daily PFAS concentration data               | [PFAS concentration data](#pfas-concentration-data)  |
 | `hybas_eu_lev12_v1c.shp` | ShapeFile containing catchment delineation (Lehner & Grill, 2013) | [References](#references)                            |
+| `hybas_eu_lev04_v1c.shp` | ShapeFile containing catchment delineation (Lehner & Grill, 2013) | [References](#references)                            |
 |                          |                                                                   |                                                      |
-|                          |                                                                   |                                                      |
+
+### HYBAS Shape files
+
+Also needs the metadata files. Please refer to [References](#references).
 
 ### PFAS concentration data
 
@@ -38,21 +45,6 @@ import fiona
 
 fiona.listlayers("pfas_data.gpkg")
 ```
-
-<details>
-<summary>BibTeX citation</summary>
-
-```bibtex
-@article{schroeder2026pfas,
-  author  = {Schröder, Robin and Flörke, Martina},
-  title   = {Title of the associated article},
-  journal = {Water Research},
-  year    = {2026},
-  doi     = {10.xxxx/xxxxx}
-}
-```
-
-</details>
 
 ## References
 

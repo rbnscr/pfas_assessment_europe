@@ -8,32 +8,15 @@ description = " "
 version = "0.0.1"
 
 dependencies = [
-#     "adjustText",
-#     "umap-learn",
+    "adjustText",
     "factor_analyzer == 0.5.1",
-#     "tabulate",
-#     "python-Levenshtein",
-#     "fuzzywuzzy",
-#     "numpy",
-    "geopandas == 1.0.1",
-    "pandas == 2.2.3",
+    "geopandas",
+    "pandas",
     "pyarrow",
-#     "pysal",
-#     "contextily",
-#     "h3",
-#     "xarray",
-#     "rioxarray",
-#     "ipykernel",
-#     "dask",
-#     "dask_geopandas",
-#     "notebook",
-#     "bokeh",
-#     "netCDF4",
-#     "cartopy",
-#     "plotly",
-#     "python-ternary",
-#     "mpltern",
-#     "shap"
+    "matplotlib == 3.10.8",
+    "cartopy == 0.25.0",
+    "seaborn",
+    "openpyxl"
 ]
 
 requires-python = ">= 3.14"
