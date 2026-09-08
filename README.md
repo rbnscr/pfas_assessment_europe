@@ -1,6 +1,6 @@
 # PFAS assessment in European surface waters
 
-[![ORCID](<https://img.shields.io/badge/ORCID-0000--0002--9155--2753-A6CE39?logo=orcid&logoColor=white)](https://orcid.org/0000-0002-9155-2753>)
+![ORCID](<https://img.shields.io/badge/ORCID-0000--0002--9155--2753-A6CE39?logo=orcid&logoColor=white)](https://orcid.org/0000-0002-9155-2753>)
 
 Code and supplementary materials for: > *Title of your research paper*
 
