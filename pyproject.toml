@@ -10,16 +10,19 @@ version = "0.0.1"
 dependencies = [
     "adjustText",
     "factor_analyzer == 0.5.1",
-    "geopandas",
-    "pandas",
+    "geopandas == 1.1.4",
+    "pandas == 3.0.5",
     "pyarrow",
     "matplotlib == 3.10.8",
     "cartopy == 0.25.0",
-    "seaborn",
-    "openpyxl"
+    "seaborn == 0.13.2",
+    "openpyxl",
+    "numpy == 2.5.3",
+    "scipy == 1.18.1",
+    "scikit-learn == 1.9.0"
 ]
 
-requires-python = ">= 3.14"
+requires-python = ">= 3.13"
 
 authors = [
   {name = "Robin Schröder", email = "robin.schroeder94@googlemail.com"}
@@ -43,31 +46,18 @@ classifiers = [
 [project.optional-dependencies]
 
 dev = [
-    # "pytest",
-    # "pytest-cov",
+
     "black",
     "isort",
     "flake8",
     "Flake8-pyproject"
 ]
 
-# docs = [
-#     "sphinx", 
-#     "myst-parser", 
-#     "sphinxcontrib-napoleon", 
-#     "furo", 
-#     "sphinx-copybutton",
-#     "nbsphinx",
-#     "sphinx-collections"
-# ]
+[project.scripts] 
+run-pfas-analysis = "pfas_assessment_europe.run_analysis:main" 
 
-# [tool.pytest.ini_options]
-# markers = [
-#     "slow: marks tests as slow",
-#     "fast: marks tests as fast"
-# ]
-
-# testpaths = ["tests"]
+[tool.setuptools.packages.find] 
+where = ["src"]
 
 [tool.isort]
 profile = "black"
