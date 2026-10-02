@@ -8,6 +8,8 @@ CITATION.md
 data/input/*
 .vscode/
 
+!data/input/pfas_data.parquet
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
