@@ -23,13 +23,15 @@ from pfas_assessment_europe.concentration_ratios import (
     test_significant_difference,
 )
 
+# from pfas_assessment_europe.constants import HYBAS_RIVER_RENAME
+
 logger = logging.getLogger(__name__)
 
 
 def create_supplementary_table(
     gdf_timeframe: gpd.GeoDataFrame,
-    basins: gpd.GeoDataFrame,
-    countries: gpd.GeoDataFrame,
+    # basins: gpd.GeoDataFrame,
+    additional_information: dict,
     save_path: Path,
 ) -> None:
     """Calculate and export supplementary PFAS assessment tables.
@@ -40,15 +42,8 @@ def create_supplementary_table(
     summary statistics, predicted no-effect concentrations, and inferred
     minimum and maximum detection or quantification limits.
 
-    The resulting tables are written to the following worksheets in
-    ``appendix_SupplementaryInformation-B.xlsx``:
-
-    - ``Ratio counts``
-    - ``Wilcoxon test``
-    - ``Country statistics``
-    - ``Substance statistics``
-    - ``PNEC``
-    - ``LOD``
+    The resulting tables are written to the file: 
+    ``appendix_SupplementaryInformation-B.xlsx``
 
     Each worksheet includes a caption in its first row. The data table starts
     in the second row.
@@ -74,69 +69,35 @@ def create_supplementary_table(
     logger.info("Computing sheet 'Ratio counts'")
     # Number of observations where two substances are present at the same time and geometry in a basin
 
-    id_name = "HYBAS_ID"
-    # Rename basins
-    lev04_rename = {
-        2040020320: "Garonne",
-        2040016230: "Rhône / Ebro",
-        2040021030: "Loire",
-        2040022150: "Seine",
-        2040021040: "Brittany / Normandy",
-        2040022160: "Maas",
-        2040023010: "Rhine",
-        2040023020: "Weser / Ems",
-        2040048790: "United Kingdom",
-        2040014550: "Tiber",
-        2040046500: "Sicily",
-        2040012730: "Po",
-        2040047500: "Corsica",
-        2040543160: "Lower Danube",
-        2040539930: "Upper Danube",
-        2040024170: "Elbe",
-        2040026060: "Oder",
-        2040026930: "Nemunas",
-        2040031500: "Baltic (Southern Sweden)",
-        2040028670: "Baltic (Western Finland)",
-        2040033480: "Norway",
-        2040028310: "Newa",
-        2040027320: "Daugava",
-        2040026920: "Nyoman",
-        2040027330: "Narva",
-        2040019150: "Duero",
-        2040019160: "Sil",
-        2040009230: "Mediterranean Balkans",
-        2040008490: "Prut",
-        2040548500: "Tysa",
-        2040540100: "Drava",
-        2040548700: "Mura-Drava-Danube",
-        2040555780: "Sava",
-    }
-    basins[id_name] = basins[id_name].astype("object")
-    basins["id"] = basins[id_name]
-    basins[id_name] = basins[id_name].replace(lev04_rename)
-    basins[id_name] = basins[id_name].astype("string")
+    # id_name = "HYBAS_ID"
+    # # Rename basins
+    # lev04_rename = HYBAS_RIVER_RENAME
+    # basins[id_name] = basins[id_name].astype("object")
+    # basins["id"] = basins[id_name]
+    # basins[id_name] = basins[id_name].replace(lev04_rename)
+    # basins[id_name] = basins[id_name].astype("string")
 
-    within = gpd.sjoin(
-        gdf_timeframe.to_crs("EPSG:3035"),
-        basins[[id_name, "geometry"]].to_crs("EPSG:3035"),
-        how="left",
-        predicate="within",
-    )
+    # within = gpd.sjoin(
+    #     gdf_timeframe.to_crs("EPSG:3035"),
+    #     basins[[id_name, "geometry"]].to_crs("EPSG:3035"),
+    #     how="left",
+    #     predicate="within",
+    # )
 
-    missing = within[within[id_name].isna()].drop(columns=id_name)
+    # missing = within[within[id_name].isna()].drop(columns=id_name)
 
-    if "index_right" in missing.columns:
-        missing = missing.drop(columns="index_right")
+    # if "index_right" in missing.columns:
+    #     missing = missing.drop(columns="index_right")
 
-    nearest = gpd.sjoin_nearest(
-        missing.to_crs("EPSG:3035"),
-        basins[[id_name, "geometry"]].to_crs("EPSG:3035"),
-        how="left",
-    )
+    # nearest = gpd.sjoin_nearest(
+    #     missing.to_crs("EPSG:3035"),
+    #     basins[[id_name, "geometry"]].to_crs("EPSG:3035"),
+    #     how="left",
+    # )
 
-    # Combine back
-    gdf_joined = pd.concat([within[within[id_name].notna()], nearest])
-
+    # # Combine back
+    # gdf_joined = pd.concat([within[within[id_name].notna()], nearest])
+    gdf_joined = gdf_timeframe.copy()
     gdf_joined["site"] = (
         gdf_joined["dayofyear"].astype(int).astype(str)
         + "_"
@@ -151,7 +112,7 @@ def create_supplementary_table(
     )
 
     # Get geometry groupby for joining
-    geom = gdf_joined.groupby("site")["HYBAS_ID"].first()
+    geom = gdf_joined.groupby("site")["basin"].first()
 
     # Create wide table with geometry info
     gdf_joined_pivot_wide = gdf_joined_pivot.join(geom)
@@ -190,7 +151,7 @@ def create_supplementary_table(
     df_greater = df_greater.set_index("Comparison").dropna()
     # Create ratio counts table
     count_ratios = (
-        df_ratios.groupby(["HYBAS_ID", "ratio"])["value"]
+        df_ratios.groupby(["basin", "ratio"])["value"]
         .count()
         .unstack()
         .fillna(0)
@@ -214,8 +175,8 @@ def create_supplementary_table(
     logger.info("Sheets Ratio counts, and Wilcoxon test done")
 
     # Create country statistics
-    logger.info("Start computing country statistics")
-
+    # logger.info("Start computing country statistics")
+    """
     europe = countries[countries["CONTINENT"].isin(["Europe", "Asia"])]
     europe = europe.to_crs(gdf_timeframe.crs)
 
@@ -243,32 +204,58 @@ def create_supplementary_table(
 
     # combine back
     gdf_joined = pd.concat([within[within["ADMIN"].notna()], nearest])
+    """
 
-    counts = gdf_joined.groupby(["ADMIN", "less_than"]).size().unstack(fill_value=0)
-    counts = counts.rename(columns={True: "true", False: "false"})
-    counts = counts.fillna(0)
+    # counts = gdf_joined.groupby(["country", "less_than"]).size().unstack(fill_value=0)
+    # counts = counts.rename(columns={True: "true", False: "false"})
+    # counts = counts.fillna(0)
 
-    counts_display_country = counts.copy()
-    counts_display_country["total"] = (
-        counts_display_country["true"] + counts_display_country["false"]
-    )
-    counts_display_country["ratio_false"] = (
-        counts_display_country["false"] / counts_display_country["total"]
-    )
+    # counts_display_country = counts.copy()
+    # counts_display_country["total"] = (
+    #     counts_display_country["true"] + counts_display_country["false"]
+    # )
+    # counts_display_country["ratio_false"] = (
+    #     counts_display_country["false"] / counts_display_country["total"]
+    # )
 
-    counts_display_country_new = counts_display_country.reset_index().copy()
-    counts_display_country_new = counts_display_country_new.rename(
-        columns={
-            "ADMIN": "Country",
-            "false": "Detected",
-            "true": "Non-detected",
-            "total": "Total",
-            "ratio_false": "Detection frequency",
-        }
-    ).set_index("Country")
-    logger.info("Country stats done")
+    # counts_display_country_new = counts_display_country.reset_index().copy()
+    # counts_display_country_new = counts_display_country_new.rename(
+    #     columns={
+    #         "country": "Country",
+    #         "false": "Detected",
+    #         "true": "Non-detected",
+    #         "total": "Total",
+    #         "ratio_false": "Detection frequency",
+    #     }
+    # ).set_index("Country")
+    # logger.info("Country stats done")
 
+    # logger.info("Basin statistics")
+    # counts_basin = gdf_joined.groupby(["HYBAS_ID", "less_than"]).size().unstack(fill_value=0)
+    # counts_basin = counts_basin.rename(columns={True: "true", False: "false"})
+    # counts_basin = counts_basin.fillna(0)
+
+    # counts_display_basin = counts_basin.copy()
+    # counts_display_basin["total"] = (
+    #     counts_display_basin["true"] + counts_display_basin["false"]
+    # )
+    # counts_display_basin["ratio_false"] = (
+    #     counts_display_basin["false"] / counts_display_basin["total"]
+    # )
+
+    # counts_display_basin_new = counts_display_basin.reset_index().copy()
+    # counts_display_basin_new = counts_display_basin_new.rename(
+    #     columns={
+    #         "HYBAS_ID": "Basin",
+    #         "false": "Detected",
+    #         "true": "Non-detected",
+    #         "total": "Total",
+    #         "ratio_false": "Detection frequency",
+    #     }
+    # ).set_index("Basin")
     logger.info("Start computing Substance stats")
+    print("Index unique:", gdf_timeframe.index.is_unique) 
+    print("Duplicate index rows:", gdf_timeframe.index.duplicated().sum())
 
     # Helper functions for statistics
     def median_detected(x):
@@ -296,7 +283,48 @@ def create_supplementary_table(
         q85=("conc", q85_detected),
         max=("conc", "max"),
     )
-
+    sort = [
+        "TFA",
+        "PFBA",
+        "PFPeA",
+        "PFHxA",
+        "PFHpA",
+        "PFOA",
+        "PFNA",
+        "PFDA",
+        "PFUnDA",
+        "PFDoDA",
+        "PFTrDA",
+        "PFTeDA",
+        "PFHxDA",
+        "PFODA",
+        "PFBS",
+        "PFPeS",
+        "PFHxS",
+        "PFHpS",
+        "PFOS",
+        "PFNS",
+        "PFDS",
+        "PFUnDS",
+        "PFDoDS",
+        "PFTrDS",
+        "Linear PFOA",
+        # "Linear PFBS",
+        # "Linear PFHpS",
+        # "Linear PFHxS",
+        "Linear PFOS",
+        "6:2 FTCA",
+        "4:2 FTS",
+        "6:2 FTS",
+        "8:2 FTS",
+        "HFPO-DA",
+        # "ADONA",
+        "DONA",
+        "FOSA",
+        "N-Et-FOSA",
+        "N-MeFOSAA",
+        "EtFOSAA",
+    ]
     substance_stats = stats.copy()
     substance_stats_new = substance_stats.reset_index().copy()
     substance_stats_new = substance_stats_new.rename(
@@ -320,6 +348,7 @@ def create_supplementary_table(
             "L_PFOS": "Linear PFOS",
         }
     )
+    substance_stats_new = substance_stats_new.reindex(sort)
     logger.info("Computing Substance stats done")
 
     logger.info("Computing PNEC and LOD sheets")
@@ -346,7 +375,7 @@ def create_supplementary_table(
         "6:2 FTS": 621.84,
         "8:2 FTS": 252.69,
         "HFPO-DA": 1351.22,
-        "ADONA": 146.666667,
+        # "ADONA": 146.666667,
         "FOSA": 166.74,
         "PPFBS": 451.9866233,
         "EtFOSAA": 300.8,
@@ -358,6 +387,7 @@ def create_supplementary_table(
         "PFDoDS": 116.73,
         "6:2 FTCA": 433.34,
         "N-Et-FOSA": 191.29,
+        "DONA" : 1746.02
     }
 
     res_lod = []
@@ -396,6 +426,72 @@ def create_supplementary_table(
     df_res_pnec = df_res_lod["PNEC (ng/L)"].dropna().copy()
     df_res_lod = df_res_lod.drop(columns="PNEC (ng/L)")
 
+    logger.info("PNEC and LOD computation done")
+    logger.info("'Sum of 20 PFAS' dependency of number of included substances computation")
+    pfas_sum = [
+            "PFBA",
+            "PFPeA",
+            "PFHxA",
+            "PFHpA",
+            "PFOA",
+            "PFNA",
+            "PFDA",
+            "PFUnDA",
+            "PFDoDA",
+            "PFTrDA",
+            "PFBS",
+            "PFPeS",
+            "PFHxS",
+            "PFHpS",
+            "PFOS",
+            "PFDS",
+            "PFNS",
+            "PFUnDS",
+            "PFDoDS",
+            "PFTrDS",
+        ]
+    
+    gdf_timeframe_for_sum = gdf_timeframe.copy()
+    gdf_timeframe_for_sum.loc[gdf_timeframe_for_sum.less_than, "conc"] = np.nan
+
+    gdf_timeframe_for_sum["site"] = (
+        gdf_timeframe_for_sum["dayofyear"].astype(int).astype(str)
+        + "_"
+        + gdf_timeframe_for_sum["year"].astype(int).astype(str)
+        + "_"
+        + gdf_timeframe_for_sum["geometry"].astype(str)
+    )
+
+    pfas_wide = gdf_timeframe_for_sum.pivot_table(
+        index="site", columns="substance", values="conc", aggfunc="median"
+    )
+
+    res = []
+    for i in range(1,21):
+        dat = pfas_wide[pfas_sum].sum(axis=1, min_count=i)
+        res_dict = {
+            "Included substances" : i,
+            "Number of matching samples" : len(dat.dropna()),
+            "Median (ng/L)" : dat.median(),
+            "Mean (ng/L)" : dat.mean(),
+            "Number of 100ng/L exceedance" : len(dat[dat>100])
+        }
+        res.append(res_dict)
+    df_pfas_sum_dependency = pd.DataFrame(res).set_index("Included substances").fillna("-")
+    logger.info("Computation done.")
+    if additional_information == {}:
+        exit()
+    logger.info("Prepare sheets from 'Additional Information'")
+    logger.info("Prepare factor analysis results table")
+    factor_analysis_res = pd.DataFrame(additional_information["Factor Analysis"]).set_index("Group ID")
+    factor_analysis_res["Substances"] = factor_analysis_res["Substances"].apply(", ".join).apply(lambda x: x.replace("L_", "Linear "))
+    factor_analysis_res["Bartlett's p"] = factor_analysis_res["Bartlett's p"].apply(
+        lambda x: "<0.05" if x < 0.05 else x
+    )
+    round_cols = ["Explained Variance 1", "KMO criterion", "Explained Variance 2", "Explained Variance 3", "Sum Explained Variance", "Max absolute factor correlation"]
+    factor_analysis_res[round_cols] = factor_analysis_res[round_cols].round(3)
+    
+
     # Prepare data for Excel export
     dict_to_excel = [
         {
@@ -408,11 +504,16 @@ def create_supplementary_table(
             "sheet": "Wilcoxon test",
             "cap": "Results from Wilcoxon statistical test of PFAS concentrations",
         },
-        {
-            "file": counts_display_country_new,
-            "sheet": "Country statistics",
-            "cap": "Counts of samples resulting in detected or non-detected PFAS per country and the respective detection frequency. Time period: 2019-2025.",
-        },
+        # {
+        #     "file": counts_display_country_new,
+        #     "sheet": "Country statistics",
+        #     "cap": "Counts of samples resulting in detected or non-detected PFAS per country and the respective detection frequency. Time period: 2019-2025.",
+        # },
+        # {
+        #     "file": counts_display_basin_new,
+        #     "sheet": "Basin statistics",
+        #     "cap" : "Counts of samples resulting in detected or non-detected PFAS per basin and the respective detection frequency. Time period: 2019-2025."
+        # },
         {
             "file": substance_stats_new,
             "sheet": "Substance statistics",
@@ -428,16 +529,64 @@ def create_supplementary_table(
             "sheet": "LOD",
             "cap": "Inferred minimum and maximum limits of detectability / quantification for 2019 - 2025.",
         },
+        {
+            "file": df_pfas_sum_dependency,
+            "sheet": "PFAS20 dependency",
+            "cap": "Dependency of the 'Sum of 20 PFAS' parameter on the minimum number of included substances.",
+        },
+        {
+            "file": factor_analysis_res,
+            "sheet": "PCAFA",
+            "cap": "Group definitions, test statistics and results from the PCA/FA.",
+        },
     ]
+    # table_numbers = ["B.1", "B.2", "B.3", "B.4", "B.5", "B.6"] 
+
+    table_numbers = [f"B.{i}" for i in range(1, len(dict_to_excel) + 1)]
+
+    table_list = [ f"{item['sheet']} - Table {number}: {item['cap']}" for item, number in zip(dict_to_excel, table_numbers) ]
+
+    metadata = {
+        "Title" : ["Supplementary Information B","Fingerprinting PFAS pollution in European surface waters"],
+        "Authors" : ["Robin Schröder\u1d43", "Tobias Licha\u1d47","Martina Flörke\u1d43"],
+        "Affiliations": ["\u1d43 Engineering Hydrology and Water Resources Management, Faculty of Civil and Environmental Engineering, Ruhr University Bochum, Universitätsstraße 150, 44801 Bochum, Germany","\u1d47 Institute of Geology, Mineralogy & Geophysics, Dept. Hydrogeology and Environmental Geology, Ruhr University Bochum, Universitätsstraße 150, 44801 Bochum, Germany"],
+        "Contents": table_list,
+        "Contact" : "robin.schroeder@hydrology.ruhr-uni-bochum.de" 
+    }
+    
+    metadata_rows = []
+
+    for key, value in metadata.items():
+        if isinstance(value, list):
+            for i, entry in enumerate(value):
+                metadata_rows.append({
+                    "Key": key if i == 0 else "",
+                    "Value": entry
+                })
+        else:
+            metadata_rows.append({
+                "Key": key,
+                "Value": value
+            })
+
+    metadata_df = pd.DataFrame(metadata_rows)
 
     sheet_counter = 1
-
     with pd.ExcelWriter(
         save_path / "appendix_SupplementaryInformation-B.xlsx"
     ) as writer:
         logger.info(
             f"Start writing Excel file to {save_path / "appendix_SupplementaryInformation-B.xlsx"}"
         )
+        # Write metadata
+        logger.info(f"Writing sheet: README")
+        metadata_df.to_excel( 
+            writer, 
+            sheet_name="README", 
+            index=False, 
+            header=False 
+            )
+
         for entry in dict_to_excel:
             logger.info(f"Writing sheet: {entry["sheet"]}")
             df_out: pd.DataFrame = entry["file"]
@@ -446,6 +595,63 @@ def create_supplementary_table(
             ws = writer.sheets[sheet_name]
             ws["A1"] = f"Table B.{sheet_counter}: {entry["cap"]}"
             sheet_counter += 1
+        # Columns dims
+        readme = writer.book["README"] 
+        readme.column_dimensions["A"].width = 20 
+        readme.column_dimensions["B"].width = 100
+
+        writer.book["Ratio counts"].column_dimensions["A"].width = 25
+        for sheet in ["B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"]:
+            writer.book["Ratio counts"].column_dimensions[sheet].width = 17
+
+        writer.book["Wilcoxon test"].column_dimensions["A"].width = 18
+        writer.book["Wilcoxon test"].column_dimensions["B"].width = 15
+        writer.book["Wilcoxon test"].column_dimensions["C"].width = 15
+        writer.book["Wilcoxon test"].column_dimensions["D"].width = 15
+
+        # writer.book["Country statistics"].column_dimensions["A"].width = 25
+        # writer.book["Country statistics"].column_dimensions["B"].width = 20
+        # writer.book["Country statistics"].column_dimensions["C"].width = 20
+        # writer.book["Country statistics"].column_dimensions["D"].width = 20
+        # writer.book["Country statistics"].column_dimensions["E"].width = 20
+
+        # writer.book["Basin statistics"].column_dimensions["A"].width = 25
+        # writer.book["Basin statistics"].column_dimensions["B"].width = 20
+        # writer.book["Basin statistics"].column_dimensions["C"].width = 20
+        # writer.book["Basin statistics"].column_dimensions["D"].width = 20
+        # writer.book["Basin statistics"].column_dimensions["E"].width = 20
+
+        writer.book["Substance statistics"].column_dimensions["A"].width = 15
+        writer.book["Substance statistics"].column_dimensions["B"].width = 20
+        writer.book["Substance statistics"].column_dimensions["C"].width = 20
+        writer.book["Substance statistics"].column_dimensions["D"].width = 20
+        writer.book["Substance statistics"].column_dimensions["E"].width = 20
+        writer.book["Substance statistics"].column_dimensions["F"].width = 20
+        writer.book["Substance statistics"].column_dimensions["G"].width = 20
+        writer.book["Substance statistics"].column_dimensions["H"].width = 20
+
+        writer.book["PNEC"].column_dimensions["A"].width = 15
+        writer.book["PNEC"].column_dimensions["B"].width = 15
+
+        writer.book["LOD"].column_dimensions["A"].width = 15
+        writer.book["LOD"].column_dimensions["B"].width = 15
+        writer.book["LOD"].column_dimensions["C"].width = 15
+        writer.book["LOD"].column_dimensions["D"].width = 15
+
+        writer.book["PFAS20 dependency"].column_dimensions["A"].width = 20
+        writer.book["PFAS20 dependency"].column_dimensions["B"].width = 30
+        writer.book["PFAS20 dependency"].column_dimensions["C"].width = 15
+        writer.book["PFAS20 dependency"].column_dimensions["D"].width = 15
+        writer.book["PFAS20 dependency"].column_dimensions["E"].width = 30
+
+
+        writer.book["PCAFA"].column_dimensions["A"].width = 10
+        writer.book["PCAFA"].column_dimensions["B"].width = 75
+        for sheet in ["C", "D", "E", "F"]:
+            writer.book["PCAFA"].column_dimensions[sheet].width = 14
+        for sheet in [ "G", "H", "I", "J"]:
+            writer.book["PCAFA"].column_dimensions[sheet].width = 22
+        writer.book["PCAFA"].column_dimensions["K"].width = 30
     logger.info("Finished Excel file")
 
 
@@ -453,8 +659,8 @@ if __name__ == "__main__":
     gdf_tf = gpd.read_file("data/input/pfas_data.gpkg")
     gdf_tf["dayofyear"] = pd.to_datetime(gdf_tf["date"], format="ISO8601").dt.dayofyear
     basins = gpd.read_file("data/input/hybas_eu_lev04_v1c.shp")
-    countries = gpd.read_file("data/input/ne_10m_admin_0_countries.shp")
+    # countries = gpd.read_file("data/input/ne_10m_admin_0_countries.shp")
     basins = basins.to_crs(gdf_tf.crs)
-    countries = countries.to_crs(gdf_tf.crs)
+    # countries = countries.to_crs(gdf_tf.crs)
 
-    create_supplementary_table(gdf_tf, basins, countries, Path("results"))
+    create_supplementary_table(gdf_tf, basins, {}, Path("results"))

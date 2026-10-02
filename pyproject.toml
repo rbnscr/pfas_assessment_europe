@@ -19,7 +19,8 @@ dependencies = [
     "openpyxl",
     "numpy == 2.5.3",
     "scipy == 1.18.1",
-    "scikit-learn == 1.9.0"
+    "scikit-learn == 1.9.0",
+    "ipykernel"
 ]
 
 requires-python = ">= 3.13"
@@ -46,7 +47,6 @@ classifiers = [
 [project.optional-dependencies]
 
 dev = [
-
     "black",
     "isort",
     "flake8",
@@ -73,3 +73,11 @@ max-line-length = 88
 max-complexity = 18
 extend-ignore = ["E203", "E266", "E501", "W503", "F601"]
 exclude = [".venv"]
+
+[tool.pyright]
+include = ["src"]
+exclude = ["results", "data"]
+ignore = ["data"]
+typeCheckingMode = "off"
+reportArgumentType = "none" 
+reportGeneralTypeIssues = "none"

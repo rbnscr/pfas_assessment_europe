@@ -15,9 +15,10 @@ from itertools import (
 from pathlib import (
     Path,
 )
-
+import pickle
 import geopandas as gpd
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -59,6 +60,7 @@ plt.rcParams.update({"font.size": 12})
 
 logger = logging.getLogger(__name__)
 
+from pfas_assessment_europe.constants import HYBAS_RIVER_RENAME
 
 def plot_convex_hull(ax, df, xcol, ycol, color, alpha=0.15):
     """Plot the convex hull surrounding a set of two-dimensional points.
@@ -92,7 +94,6 @@ def full_pca_analysis(
     gdf_dropped: gpd.GeoDataFrame,
     groups: dict,
     save_path: Path,
-    basins: gpd.GeoDataFrame,
     id_name: str,
 ):
     """Run grouped PCA analyses and save rotated PCA biplots.
@@ -109,7 +110,6 @@ def full_pca_analysis(
     rotation. Substances are additionally grouped using hierarchical
     clustering with Ward's linkage method.
 
-    Sampling locations are spatially joined to the supplied basin geometries.
     For each substance group, the function generates a biplot showing:
 
     - Rotated sample scores.
@@ -119,7 +119,7 @@ def full_pca_analysis(
     - Labels adjusted to reduce overlap.
 
     The primary group named ``"A"`` is saved as
-    ``pcafa_biplot_A.pdf``. Biplots for other groups are saved using the
+    ``main_pcafa_biplot_A.pdf``. Biplots for other groups are saved using the
     ``appendix_pcafa_biplot_<group>.pdf`` naming scheme.
 
     Args:
@@ -131,8 +131,6 @@ def full_pca_analysis(
             Every substance listed in a group must be present at a location
             for that location to be included in the corresponding analysis.
         save_path: Directory in which the PCA biplot PDF files are saved.
-        basins: GeoDataFrame containing basin geometries used to assign
-            sampling locations to regions.
         id_name: Name of the column in ``basins`` containing basin or region
             identifiers.
 
@@ -146,8 +144,14 @@ def full_pca_analysis(
     counts.loc["Total"] = counts.sum()
 
     cluster_results = []
+    report_results = []
 
     plt.rcParams.update({"font.size": 12})
+
+    report_sum_expl_max = 0.0
+    report_sum_expl_min = 1.0
+    report_max_corr = 0.0
+    report_third_comp_max = 0.0
 
     for group_n, substances in groups.items():
         pipeline = Pipeline(
@@ -172,7 +176,7 @@ def full_pca_analysis(
             + "_"
             + df["geometry"].astype(str)
         )
-
+        df_reference = df.copy()
         # In case there are multiple values at the same location and date, calculate median
         df = df.pivot_table(
             index="site", columns="substance", values="conc", aggfunc="median"
@@ -196,6 +200,12 @@ def full_pca_analysis(
 
         X_pca = pipeline.fit_transform(df)
         pca = pipeline.named_steps["pca"]
+        logger.info(f"PCA explained variance (ratio): {pca.explained_variance_ratio_}")
+        logger.info(f"PCA sum explained variance (ratio): {np.sum(pca.explained_variance_ratio_)}")
+
+        report_sum_expl_max = max(np.sum(pca.explained_variance_ratio_), report_sum_expl_max)
+        report_sum_expl_min = min(np.sum(pca.explained_variance_ratio_), report_sum_expl_min)
+        report_third_comp_max = max(pca.explained_variance_ratio_[2], report_third_comp_max)
         rotator = Rotator(method="varimax")
 
         pattern = rotator.fit_transform(pca.components_.T)
@@ -209,24 +219,24 @@ def full_pca_analysis(
 
         x, y, z = pattern.T
 
-        points = df.index.str.rsplit("_", n=1).str[-1].map(wkt.loads)
-        points_gdf = gpd.GeoDataFrame(
-            {
-                "factor1": scores_rot[:, 0],
-                "factor2": scores_rot[:, 1],
-                "factor3": scores_rot[:, 2],
-            },
-            geometry=points.values,
-            crs=gdf_dropped.crs,
+        points_region = pd.DataFrame(
+            scores_rot,
+            index = df.index,
+            columns = ["factor1", "factor2", "factor3"]
         )
-        points_country = gpd.sjoin(points_gdf, basins, how="left", predicate="within")
-        countries = sorted(points_country[id_name].dropna().unique())
-        if len(countries) > 10:
+        site_basin = df_reference[["site", "basin"]].drop_duplicates()
+        basin_by_site = site_basin.set_index("site")["basin"]
+        points_region["basin"] = basin_by_site.reindex(points_region.index)
+
+        logger.info(points_region.basin.unique())
+
+        regions = sorted(points_region[id_name].dropna().unique())
+        if len(regions) > 10:
             palette = sns.color_palette("tab20", 20)
         else:
             palette = sns.color_palette("tab10", 10)
 
-        country_colors = dict(zip(countries, palette))
+        region_colors = dict(zip(regions, palette))
         markers = [
             "s",
             "o",
@@ -248,7 +258,7 @@ def full_pca_analysis(
             "1",
         ]
         marker_cycle = cycle(markers)
-        country_markers = {country: next(marker_cycle) for country in countries}
+        region_markers = {region: next(marker_cycle) for region in regions}
 
         # Initialise max_corr
         max_corr = 0.0
@@ -258,6 +268,8 @@ def full_pca_analysis(
         max_corr = np.max(np.abs(phi[np.triu_indices_from(phi, k=1)]))
 
         logger.info(f"Maximum absolute factor correlation: {max_corr:.3f}")
+
+        report_max_corr = max(max_corr, report_max_corr)
 
         # Clustering
         Z = linkage(pattern, method="ward")
@@ -316,21 +328,21 @@ def full_pca_analysis(
                 color=color_secondary_axis,
             )
             texts.append(txt)
-        for country, group in points_country.groupby(id_name):
+        for region, group in points_region.groupby(id_name):
             ax1.scatter(
                 group["factor1"],
                 group["factor3"],
-                color=country_colors[country],
-                marker=country_markers[country],
-                label=country,
+                color=region_colors[region],
+                marker=region_markers[region],
+                label=region,
                 alpha=0.4,
                 zorder=1,
             )
-            plot_convex_hull(ax1, group, "factor1", "factor3", country_colors[country])
+            plot_convex_hull(ax1, group, "factor1", "factor3", region_colors[region])
             txt = ax1.text(
                 group["factor1"].mean(),
                 group["factor3"].mean(),
-                country,
+                region,
                 fontsize=9,
                 ha="center",
                 va="center",
@@ -402,21 +414,21 @@ def full_pca_analysis(
             )
             texts.append(txt)
 
-        for country, group in points_country.groupby(id_name):
+        for region, group in points_region.groupby(id_name):
             ax2.scatter(
                 group["factor2"],
                 group["factor3"],
-                color=country_colors[country],
-                marker=country_markers[country],
-                label=country,
+                color=region_colors[region],
+                marker=region_markers[region],
+                label=region,
                 alpha=0.4,
                 zorder=1,
             )
-            plot_convex_hull(ax2, group, "factor2", "factor3", country_colors[country])
+            plot_convex_hull(ax2, group, "factor2", "factor3", region_colors[region])
             txt = ax2.text(
                 group["factor2"].mean(),
                 group["factor3"].mean(),
-                country,
+                region,
                 fontsize=9,
                 ha="center",
                 va="center",
@@ -451,22 +463,41 @@ def full_pca_analysis(
         secax_y2.yaxis.label.set_color(color_secondary_axis)
         secax_y2.tick_params(axis="y", colors=color_secondary_axis)
         secax_y2.spines["right"].set_color(color_secondary_axis)
+
+        ax1.text(
+            -0.08,
+            1.05,
+            "a",
+            transform=ax1.transAxes,
+            fontsize=11,
+            fontweight="bold",
+            va="top",
+        )
+        ax2.text(
+            -0.08,
+            1.05,
+            "b",
+            transform=ax2.transAxes,
+            fontsize=11,
+            fontweight="bold",
+            va="top",
+        )
         handles = [
             Line2D(
                 [0],
                 [0],
-                marker=country_markers[c],
+                marker=region_markers[c],
                 color="w",
-                markerfacecolor=country_colors[c],
-                markeredgecolor=country_colors[c],
+                markerfacecolor=region_colors[c],
+                markeredgecolor=region_colors[c],
                 markersize=6,
                 linestyle="None",
                 label=c,
             )
-            for c in countries
+            for c in regions
         ]
 
-        n_sub = len(countries)
+        n_sub = len(regions)
 
         # choose n_cols
         if n_sub <= 5:
@@ -484,71 +515,174 @@ def full_pca_analysis(
             frameon=False,
             loc="upper center",
         )
+
+
         if group_n == "A":
-            plt.savefig(save_path / f"pcafa_biplot_{group_n}.pdf", bbox_inches="tight")
+            plt.savefig(save_path / f"main_pcafa_biplot_{group_n}.pdf", bbox_inches="tight")
         else:
             plt.savefig(
                 save_path / f"appendix_pcafa_biplot_{group_n}.pdf", bbox_inches="tight"
             )
         plt.close(fig)
 
-    return cluster_results
+        report_results.append(
+            {
+                "Group ID" : group_n,
+                "Substances" : substances,
+                "Sampling sites": matching_locations,
+                "Samples" : len(df),
+                "KMO criterion" : kmo_model,
+                "Bartlett's p" : p_value,
+                "Explained Variance 1" : pca.explained_variance_ratio_[0],
+                "Explained Variance 2" : pca.explained_variance_ratio_[1],
+                "Explained Variance 3" : pca.explained_variance_ratio_[2],
+                "Sum Explained Variance" : np.sum(pca.explained_variance_ratio_),
+                "Max absolute factor correlation" : max_corr,
+            }
+        )
+
+    logger.info(f"Minium cumulative variance explained: {report_sum_expl_min}")
+    logger.info(f"Maximum cumulative variance explained: {report_sum_expl_max}")
+    logger.info(f"Maximum third component across groups: {report_third_comp_max}")
+    logger.info(f"Maximum absolute factor correlation across groups: {report_max_corr:.3f}")
+
+    return cluster_results, report_results
 
 
 def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
-    """Plot and save a consensus matrix for repeated clustering results.
+    sort_substances = [
+        "TFA", "PFBA", "PFPeA", "PFHxA", "PFHpA", "PFOA", "PFNA", "PFDA",
+        "PFUnDA", "PFDoDA", "PFTrDA", "PFTeDA", "PFHxDA", "PFODA",
+        "PFBS", "PFPeS", "PFHxS", "PFHpS", "PFOS", "PFNS", "PFDS",
+        "PFUnDS", "PFDoDS", "PFTrDS", "Linear PFOA", "Linear PFOS", "6:2 FTCA", "4:2 FTS",
+        "6:2 FTS", "8:2 FTS", "HFPO-DA", "DONA", "FOSA", "N-Et-FOSA",
+        "N-MeFOSAA", "EtFOSAA",
+    ]
 
-    The consensus matrix shows the frequency with which pairs of substances
-    are assigned to the same cluster across multiple clustering runs. Pairs
-    that never occur together in a clustering run are displayed in grey.
+    # These substances appear first, in this order.
+    preferred_order = [
+        "PFPeA", "PFHxA", "PFHpA",
+        "PFOA", "PFBA", "PFBS", 
+        "PFDA", "PFNA",
+        "PFOS", "PFHxS", "PFPeS", "PFHpS", 
+        "Linear PFOA", "Linear PFOS"
+    ]
 
-    The resulting heatmap is saved as
-    ``appendix_consensus_matrix.pdf`` in ``save_path``.
+    # Each group must be contiguous in the displayed order for its rectangle
+    # to enclose just that group's block.
+    groups = [
+        {
+            "substances": ["PFPeA", "PFHxA", "PFHpA"],
+            "label": "Factor 1: Short-chain PFCAs",
+            "color": "red",
+            "text_x_offset": 14,
+        },
+        {
+            "substances": ["PFPeA", "PFHxA", "PFHpA", "PFOA", "PFBA"],
+            "label": "Occasional co-loading of \nshort- and long-chain PFCAs",
+            "color": "black",
+            "text_x_offset": 14,
+            "text_y_offset": 0.5,
+            "linestyle" : "--",
+            "linewidth" : 1
+        },
+        {
+            "substances": ["PFOS", "PFHxS"],
+            "label": "Factor 2: Long-chain PFSAs",
+            "text_x_offset" : 14,
+            "color": "red",
+        },
+        {
+            "substances": ["PFOS", "PFHxS", "PFPeS", "PFHpS"],
+            "label": "Co-loading of \nshort- and long-chain PFSAs",
+            "color": "black",
+            "text_x_offset": 14,
+            "text_y_offset": 0.5,
+            "linestyle" : "--",
+            "linewidth" : 1
+        },
+        {
+            "substances": ["PFBA", "PFBS"],
+            "label": "Factor 3: Short-chain PFAAs",
+            "color": "red",
+            "text_x_offset": 14,
+        },
+        {
+            "substances": ["PFNA", "PFDA"],
+            "label": "Factor 4: Long-chain PFCAs",
+            "color": "red",
+            "text_x_offset": 14,
+            "text_y_offset": -0.5,
+        },
+        {
+            "substances": ["PFOS", "PFHxS", "PFDA", "PFNA"],
+            "label": "Occasional co-loading of \nFactor 2 and 4 substances",
+            "color": "black",
+            "text_x_offset": 14,
+            "text_y_offset": -0.5,
+            "linestyle" : "--",
+            "linewidth" : 1
+        },
+    ]
 
-    Args:
-        cluster_results: Iterable of dictionaries containing clustering
-            assignments. Each dictionary must map feature or substance names
-            to cluster labels.
-        save_path: Directory in which the consensus-matrix PDF is saved.
+    # Normalize names such as L_PFOA to Linear PFOA.
+    normalized_results = [
+        {
+            key.replace("L_", "Linear ", 1) if key.startswith("L_") else key: value
+            for key, value in record.items()
+        }
+        for record in cluster_results
+    ]
 
-    Returns:
-        None. The consensus heatmap is saved to disk.
-    """
-    features = sorted({f for r in cluster_results for f in r})
+    present_features = {feature for record in normalized_results for feature in record}
+
+    # Requested order first, then the original preferred order, then any
+    # remaining features alphabetically.
+    features = (
+        [f for f in preferred_order if f in present_features]
+        + [
+            f for f in sort_substances
+            if f in present_features and f not in preferred_order
+        ]
+        + sorted(present_features - set(sort_substances) - set(preferred_order))
+    )
+
     n = len(features)
-    plt.rcParams.update({"font.size": 12})
-    co_mat = np.zeros((n, n))
-    co_run_count = np.zeros((n, n))  # number of runs where both features exist
+    if n == 0:
+        raise ValueError("No features found in cluster_results.")
 
-    #  map feature name -> index
-    idx = {f: i for i, f in enumerate(features)}
+    idx = {feature: i for i, feature in enumerate(features)}
+    co_mat = np.zeros((n, n), dtype=float)
+    co_run_count = np.zeros((n, n), dtype=float)
 
-    # compute co-occurrence and count of runs where both features exist
-    for r in cluster_results:
-        present = list(r.keys())
-        for i, fi in enumerate(present):
-            for j, fj in enumerate(present):
-                ii, jj = idx[fi], idx[fj]
-                co_run_count[ii, jj] += 1
-                if r[fi] == r[fj]:
-                    co_mat[ii, jj] += 1
+    for record in normalized_results:
+        present = [feature for feature in record if feature in idx]
+
+        for fi in present:
+            for fj in present:
+                i, j = idx[fi], idx[fj]
+                co_run_count[i, j] += 1
+                if record[fi] == record[fj]:
+                    co_mat[i, j] += 1
 
     consensus = co_mat / np.maximum(co_run_count, 1)
 
-    # create mask for pairs that never co-occurred
+    # Mask pairs that never appeared together and the upper triangle.
     mask_never = co_run_count == 0
+    mask_upper = np.triu(np.ones((n, n), dtype=bool), k=1)
+    mask = mask_never | mask_upper
 
-    # set these to NaN so they can be grey
     consensus_masked = consensus.copy()
     consensus_masked[mask_never] = np.nan
 
-    # plot
     cmap = sns.color_palette("crest", as_cmap=True)
-    cmap.set_bad(color="lightgrey")  # grey for never co-occurred pairs
+    # cmap.set_bad(color="lightgrey")
 
-    plt.figure(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(max(12, n * 0.45), max(8, n * 0.45)))
+
     sns.heatmap(
         consensus_masked,
+        mask=mask,
         cmap=cmap,
         xticklabels=features,
         yticklabels=features,
@@ -558,16 +692,184 @@ def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
         linecolor="white",
         annot=True,
         fmt=".1f",
+        ax=ax,
     )
 
-    plt.tight_layout()
-    plt.savefig(save_path / "appendix_consensus_matrix.pdf", bbox_inches="tight")
+    # Outline each group's diagonal block and label it to the right.
+    for group in groups:
+        members = [s for s in group["substances"] if s in idx]
+        if not members:
+            continue
 
-    plt.close()
+        positions = sorted(idx[s] for s in members)
+        start, end = positions[0], positions[-1]
+
+        if positions != list(range(start, end + 1)):
+            raise ValueError(
+                f"Group {group['label']!r} is not contiguous in the feature order. "
+                "Adjust preferred_order so its substances are next to each other."
+            )
+        linestyle = group.get("linestyle", "-")
+        linewidth = group.get("linewidth", 2.5)
+        size = end - start + 1
+        ax.add_patch(
+            patches.Rectangle(
+                (start, start),
+                size,
+                size,
+                fill=False,
+                edgecolor=group["color"],
+                linewidth = linewidth,
+                linestyle = linestyle,
+                clip_on=False,
+            )
+        )
+
+        text_x = group.get("text_x_offset", n + 1)
+        text_y_offset = group.get("text_y_offset", 0)
+        center_y = start + size / 2
+        ax.annotate(
+            group["label"],
+            xy=(end + 1, center_y + text_y_offset),
+            xytext=(text_x, center_y + text_y_offset),
+            ha="left",
+            va="center",
+            color=group["color"],
+            arrowprops={"arrowstyle": "-", "color": group["color"]},
+            annotation_clip=False,
+        )
+
+    # Make room for group labels placed to the right.
+    # ax.set_xlim(0, n + 5)
+    fig.tight_layout()
+    fig.savefig(save_path / "appendix_consensus_matrix.pdf", bbox_inches="tight")
+    plt.close(fig)
+
+# def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
+#     """Plot and save a consensus matrix for repeated clustering results.
+
+#     The consensus matrix shows the frequency with which pairs of substances
+#     are assigned to the same cluster across multiple clustering runs. Pairs
+#     that never occur together in a clustering run are displayed in grey.
+
+#     The resulting heatmap is saved as
+#     ``appendix_appendix_consensus_matrix.pdf`` in ``save_path``.
+
+#     Args:
+#         cluster_results: Iterable of dictionaries containing clustering
+#             assignments. Each dictionary must map feature or substance names
+#             to cluster labels.
+#         save_path: Directory in which the consensus-matrix PDF is saved.
+
+#     Returns:
+#         None. The consensus heatmap is saved to disk.
+#     """
+#     sort_substances = [
+#             "TFA",
+#             "PFBA",
+#             "PFPeA",
+#             "PFHxA",
+#             "PFHpA",
+#             "PFOA",
+#             "PFNA",
+#             "PFDA",
+#             "PFUnDA",
+#             "PFDoDA",
+#             "PFTrDA",
+#             "PFTeDA",
+#             "PFHxDA",
+#             "PFODA",
+#             "PFBS",
+#             "PFPeS",
+#             "PFHxS",
+#             "PFHpS",
+#             "PFOS",
+#             "PFNS",
+#             "PFDS",
+#             "PFUnDS",
+#             "PFDoDS",
+#             "PFTrDS",
+#             "Linear PFOA",
+#             "Linear PFBS",
+#             "Linear PFHpS",
+#             "Linear PFHxS",
+#             "Linear PFOS",
+#             "6:2 FTCA",
+#             "4:2 FTS",
+#             "6:2 FTS",
+#             "8:2 FTS",
+#             "HFPO-DA",
+#             # "ADONA",
+#             "DONA",
+#             "FOSA",
+#             "N-Et-FOSA",
+#             "N-MeFOSAA",
+#             "EtFOSAA",
+#         ]
+#     cluster_results = [ 
+#         { 
+#             key.replace("L_", "Linear ", 1) if key.startswith("L_") else key: value for key, value in record.items() 
+#             } for record in cluster_results 
+#         ]
+
+#     features = sorted({f for r in cluster_results for f in r})
+#     features = [substance for substance in sort_substances if substance in features]
+#     # print(features)
+#     # print(cluster_results)
+#     n = len(features)
+#     plt.rcParams.update({"font.size": 12})
+#     co_mat = np.zeros((n, n))
+#     co_run_count = np.zeros((n, n))  # number of runs where both features exist
+
+#     #  map feature name -> index
+#     idx = {f: i for i, f in enumerate(features)}
+
+#     # compute co-occurrence and count of runs where both features exist
+#     for r in cluster_results:
+#         present = list(r.keys())
+#         for i, fi in enumerate(present):
+#             for j, fj in enumerate(present):
+#                 ii, jj = idx[fi], idx[fj]
+#                 co_run_count[ii, jj] += 1
+#                 if r[fi] == r[fj]:
+#                     co_mat[ii, jj] += 1
+
+#     consensus = co_mat / np.maximum(co_run_count, 1)
+
+#     # create mask for pairs that never co-occurred
+#     mask_never = co_run_count == 0
+
+#     # set these to NaN so they can be grey
+#     consensus_masked = consensus.copy()
+#     consensus_masked[mask_never] = np.nan
+#     # print(consensus_masked)
+#     # plot
+#     cmap = sns.color_palette("crest", as_cmap=True)
+#     cmap.set_bad(color="lightgrey")  # grey for never co-occurred pairs
+
+#     plt.figure(figsize=(10, 8))
+#     sns.heatmap(
+#         consensus_masked,
+#         cmap=cmap,
+#         xticklabels=features,
+#         yticklabels=features,
+#         square=True,
+#         cbar_kws={"label": "Co-clustering frequency"},
+#         linewidth=0.1,
+#         linecolor="white",
+#         annot=True,
+#         fmt=".1f",
+#     )
+
+#     plt.tight_layout()
+#     plt.savefig(save_path / "appendix_consensus_matrix.pdf", bbox_inches="tight")
+
+#     plt.close()
 
 
 def factor_analysis(
-    gdf_dropped: gpd.GeoDataFrame, basins: gpd.GeoDataFrame, save_path: Path
+    gdf_dropped: gpd.GeoDataFrame, 
+    save_path: Path
 ):
     """Run grouped factor analyses and generate PCA visualizations.
 
@@ -583,8 +885,6 @@ def factor_analysis(
         gdf_dropped: GeoDataFrame containing PFAS observations. It must contain
             the columns required by :func:`full_pca_analysis`, including
             ``geometry``, ``substance``, ``conc``, ``dayofyear``, and ``year``.
-        basins: GeoDataFrame containing HydroBASINS geometries and a
-            ``HYBAS_ID`` column used to assign observations to regions.
         save_path: Directory in which the generated plots are saved.
 
     Returns:
@@ -592,50 +892,16 @@ def factor_analysis(
         are saved to ``save_path``.
     """
     logger.info("--- Starting Factor Analysis ---")
-    lev04_rename = {
-        2040020320: "Garonne",
-        2040016230: "Rhône / Ebro",
-        2040021030: "Loire",
-        2040022150: "Seine",
-        2040021040: "Brittany / Normandy",
-        2040022160: "Maas",
-        2040023010: "Rhine",
-        2040023020: "Weser / Ems",
-        2040048790: "United Kingdom",
-        2040014550: "Tiber",
-        2040046500: "Sicily",
-        2040012730: "Po",
-        2040047500: "Corsica",
-        2040543160: "Lower Danube",
-        2040539930: "Upper Danube",
-        2040024170: "Elbe",
-        2040026060: "Oder",
-        2040026930: "Nemunas",
-        2040031500: "Baltic (Southern Sweden)",
-        2040028670: "Baltic (Western Finland)",
-        2040033480: "Norway",
-        2040028310: "Newa",
-        2040027320: "Daugava",
-        2040026920: "Nyoman",
-        2040027330: "Narva",
-        2040019150: "Duero",
-        2040019160: "Sil",
-        2040009230: "Mediterranean Balkans",
-        2040008490: "Prut",
-        2040548500: "Tysa",
-        2040540100: "Drava",
-        2040548700: "Mura-Drava-Danube",
-        2040555780: "Sava",
-    }
-    id_name = "HYBAS_ID"
-    basins[id_name] = basins[id_name].astype("object")
-    basins.loc[~basins[id_name].isin(lev04_rename.keys()), id_name] = "Other"
-    basins[id_name] = basins[id_name].replace(lev04_rename)
-    basins[id_name] = basins[id_name].astype("string")
-
+    # lev04_rename = HYBAS_RIVER_RENAME
+    # id_name = "HYBAS_ID"
+    # basins[id_name] = basins[id_name].astype("object")
+    # basins.loc[~basins[id_name].isin(lev04_rename.keys()), id_name] = "Other"
+    # basins[id_name] = basins[id_name].replace(lev04_rename)
+    # basins[id_name] = basins[id_name].astype("string")
+    id_name = "basin"
     groups_dict = {
         "A": ["PFBA", "PFBS", "PFHpA", "PFHxS", "PFHxA", "PFOA", "PFOS", "PFPeA"],
-        "A01": [
+        "A1": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -644,10 +910,10 @@ def factor_analysis(
             "PFOA",
             "PFOS",
             "PFPeA",
-            "PFNA",
-            "PFDA",
+            "PFNA", #
+            "PFDA",#
         ],
-        "A02": [
+        "A2": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -656,10 +922,10 @@ def factor_analysis(
             "PFOA",
             "PFOS",
             "PFPeA",
-            "L_PFOS",
-            "L_PFOA",
+            "L_PFOS",#
+            "L_PFOA",#
         ],
-        "A03": [
+        "A3": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -668,9 +934,9 @@ def factor_analysis(
             "PFOA",
             "PFOS",
             "PFPeA",
-            "6:2 FTS",
+            "6:2 FTS",#
         ],
-        "A04": [
+        "A4": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -679,9 +945,21 @@ def factor_analysis(
             "PFOA",
             "PFOS",
             "PFPeA",
-            "PFPeS",
+            "PFPeS",#
         ],
-        "A05": [
+        # "A05": [
+        #     "PFBA",
+        #     "PFBS",
+        #     "PFHpA",
+        #     "PFHxS",
+        #     "PFHxA",
+        #     "PFOA",
+        #     "PFOS",
+        #     "PFPeA",
+        #     "PFNA",#
+        #     "PFPeS",#
+        # ],
+        "A5": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -690,10 +968,9 @@ def factor_analysis(
             "PFOA",
             "PFOS",
             "PFPeA",
-            "PFNA",
-            "PFPeS",
+            "PFDA"#
         ],
-        "A06": [
+        "A6": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -702,9 +979,9 @@ def factor_analysis(
             "PFOA",
             "PFOS",
             "PFPeA",
-            "HFPO-DA",
+            "PFNA",#
         ],
-        "A07": [
+        "A7": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -713,106 +990,160 @@ def factor_analysis(
             "PFOA",
             "PFOS",
             "PFPeA",
-            "FOSA",
+            "HFPO-DA",#
         ],
-        "B": ["PFOA", "PFOS", "PFHxA", "PFBS", "PFHpA", "PFHxS", "PFHpS"],
-        "C": [
-            "L_PFBS",
-            "L_PFHxS",
-            "L_PFOS",
+        "A8": [
             "PFBA",
-            "PFDA",
+            "PFBS",
             "PFHpA",
+            "PFHxS",
             "PFHxA",
-            "PFNA",
             "PFOA",
+            "PFOS",
             "PFPeA",
-            "PFPeS",
-        ],
-        "D": [
-            "EtFOSAA",
-            "L_PFBS",
-            "L_PFHxS",
-            "L_PFOS",
-            "PFBA",
-            "PFDA",
-            "PFHpA",
-            "PFHxA",
-            "PFNA",
-            "PFOA",
-            "PFPeA",
-            "PFPeS",
-        ],
-        "E": [
-            "EtFOSAA",
-            "FOSA",
-            "N-MeFOSAA",
-            "L_PFBS",
-            "L_PFHxS",
-            "L_PFOS",
-            "PFBA",
-            "PFDA",
-            "PFHpA",
-            "PFHxA",
-            "PFNA",
-            "PFOA",
-            "PFPeA",
-            "PFPeS",
-        ],
-        "F": ["FOSA", "L_PFOS", "PFBA", "PFOA", "PFHpA", "PFHxA", "PFPeA", "PFPeS"],
-        "G": [
-            "EtFOSAA",
-            "FOSA",
-            "L_PFOS",
-            "PFBA",
-            "PFOA",
-            "PFHpA",
-            "PFHxA",
-            "PFPeA",
-            "PFPeS",
-        ],
-        "H": ["PFBA", "PFBS", "PFHpA", "PFHxA", "PFOA", "PFOS", "PFPeA", "TFA"],
-        "I": [
-            "L_PFHpS",
-            "PFNA",
-            "L_PFBS",
-            "L_PFOS",
-            "PFDA",
-            "PFPeS",
-            "L_PFHxS",
-            "PFBA",
-            "PFHpA",
-            "PFOA",
-            "PFPeA",
-        ],
+            "FOSA",#
+        ],        
+        # "A08": [
+        #     "PFBA",
+        #     "PFBS",
+        #     "PFHpA",
+        #     "PFHxS",
+        #     "PFHxA",
+        #     "PFOA",
+        #     "PFOS",
+        #     "PFPeA",
+        #     "HFPO-DA",#
+        # ],
+        "B": [
+            "PFOA", 
+            "PFOS", 
+            "PFHxA", 
+            "PFBS", 
+            "PFHpA", 
+            "PFHxS", 
+            "PFHpS"#
+            ],
+        "C":["N-MeFOSAA", "PFBS", "PFHpA", "PFHxA", "PFHxS", "PFOA", "PFOS", "PFPeA"], # N-MeFOSAA
+        # "C1":["6:2 FTS", "EtFOSAA", "FOSA", "L_PFOS", "N-MeFOSAA", "PFPeS"],
+        # "D":["6:2 FTS", "EtFOSAA", "FOSA", "L_PFOS", "N-MeFOSAA", "PFPeS"], # EtFOSAA
+        "D":["EtFOSAA", "PFBA", "PFBS", "PFHpA", "PFHxA", "PFHxS", "PFOA", "PFPeA"],
+        # "E": ["DONA", "PFBA", "PFHxA", "PFOA", "PFOS", "PFPeA"], # DONA
+        "E":["DONA", "PFBA", "PFHpA", "PFHxA", "PFOA", "PFOS", "PFPeA"],
+        # "F":["6:2 FTS","8:2 FTS", "EtFOSAA", "L_PFOS", "N-MeFOSAA", "PFPeS"], # 8:2 FTS
+        # "F1":["6:2 FTS", "8:2 FTS", "EtFOSAA", "FOSA", "L_PFOS", "N-MeFOSAA", "PFPeS"],
+        # "C": [
+        #     # "L_PFBS",
+        #     # "L_PFHxS",
+        #     "L_PFOS",
+        #     "PFBA",
+        #     "PFDA",
+        #     "PFHpA",
+        #     "PFHxA",
+        #     "PFNA",
+        #     "PFOA",
+        #     "PFPeA",
+        #     "PFPeS",
+        # ],
+        # "D": [
+        #     "EtFOSAA",
+        #     # "L_PFBS",
+        #     # "L_PFHxS",
+        #     "L_PFOS",
+        #     "PFBA",
+        #     "PFDA",
+        #     "PFHpA",
+        #     "PFHxA",
+        #     "PFNA",
+        #     "PFOA",
+        #     "PFPeA",
+        #     "PFPeS",
+        # ],
+        # "E": [
+        #     "EtFOSAA",
+        #     "FOSA",
+        #     "N-MeFOSAA",
+        #     # "L_PFBS",
+        #     # "L_PFHxS",
+        #     "L_PFOS",
+        #     "PFBA",
+        #     "PFDA",
+        #     "PFHpA",
+        #     "PFHxA",
+        #     "PFNA",
+        #     "PFOA",
+        #     "PFPeA",
+        #     "PFPeS",
+        # ],
+        # "F": ["FOSA", "L_PFOS", "PFBA", "PFOA", "PFHpA", "PFHxA", "PFPeA", "PFPeS"],
+        # "G": [
+        #     "EtFOSAA",
+        #     "FOSA",
+        #     "L_PFOS",
+        #     "PFBA",
+        #     "PFOA",
+        #     "PFHpA",
+        #     "PFHxA",
+        #     "PFPeA",
+        #     "PFPeS",
+        # ],
+        # "H": ["PFBA", "PFBS", "PFHpA", "PFHxA", "PFOA", "PFOS", "PFPeA", "TFA"],
+        "F": ["PFBA", "PFOS", "PFHxS", "PFOA", "PFHxA", "PFPeA", "PFHpA", "TFA"], #TFA
+        # "I": [
+        #     # "L_PFHpS",
+        #     "PFNA",
+        #     # "L_PFBS",
+        #     "L_PFOS",
+        #     "PFDA",
+        #     "PFPeS",
+        #     # "L_PFHxS",
+        #     "PFBA",
+        #     "PFHpA",
+        #     "PFOA",
+        #     "PFPeA",
+        # ],
+        "G": ["PFDA", "PFHpA", "PFHxA", "PFHxS", "PFNA", "PFOA", "PFPeA", "PFPeS"]
     }
-    cluster_results = full_pca_analysis(
-        gdf_dropped, groups_dict, save_path, basins, id_name
+    cluster_results, report_results = full_pca_analysis(
+        gdf_dropped, 
+        groups_dict, 
+        save_path, 
+        # basins, 
+        id_name
     )
+    # with open("cluster_results.pkl", "wb") as f:
+    #     pickle.dump(cluster_results, f)
     plot_consensus_matrix(cluster_results, save_path)
     logger.info("--- Finished Factor Analysis ---")
 
+    return report_results
+
 
 def main() -> None:
-    input_path = Path("data/input/")
-    gdf: gpd.GeoDataFrame = gpd.read_file(input_path.joinpath("pfas_data.gpkg"))
-    gdf = gdf[gdf.year > 2018]
-    # gdf = gpd.read_file(input_path.joinpath("pfas_data.gpkg"))
-    basins: gpd.GeoDataFrame = gpd.read_file(
-        input_path.joinpath("hybas_eu_lev04_v1c.shp")
-    )
-    gdf_dropped = gdf[~gdf["less_than"]]
-    gdf_dropped["month"] = pd.to_datetime(
-        gdf_dropped["date"], format="ISO8601"
-    ).dt.month
-    gdf_dropped["dayofyear"] = pd.to_datetime(
-        gdf_dropped["date"], format="ISO8601"
-    ).dt.dayofyear
+    # input_path = Path("data/input/")
+    # gdf: gpd.GeoDataFrame = gpd.read_file(input_path.joinpath("pfas_data.gpkg"))
+    # gdf = gdf[gdf.year > 2018]
+    # # gdf = gpd.read_file(input_path.joinpath("pfas_data.gpkg"))
+    # basins: gpd.GeoDataFrame = gpd.read_file(
+    #     input_path.joinpath("hybas_eu_lev04_v1c.shp")
+    # )
+    # gdf_dropped = gdf[~gdf["less_than"]]
+    # gdf_dropped["month"] = gdf_dropped["date"].dt.month
+    # gdf_dropped["dayofyear"] = gdf_dropped["date"].dt.dayofyear
+    # # gdf_dropped["month"] = pd.to_datetime(
+    # #     gdf_dropped["date"], format="ISO8601"
+    # # ).dt.month
+    # # gdf_dropped["dayofyear"] = pd.to_datetime(
+    # #     gdf_dropped["date"], format="ISO8601"
+    # # ).dt.dayofyear
     save_path = Path("results/")
 
-    basins = basins.to_crs(gdf.crs)  # pyright: ignore[reportArgumentType]
+    # basins = basins.to_crs(gdf.crs)  # pyright: ignore[reportArgumentType]
 
-    factor_analysis(gdf_dropped, basins, save_path)
+    # factor_analysis(gdf_dropped, basins, save_path) 
+    file_path = Path("cluster_results.pkl")
+    # with file_path.open("rb") as f:
+    #     cluster_results = pickle.load(f)
+    plot_consensus_matrix(cluster_results, save_path)
 
 
 if __name__ == "__main__":

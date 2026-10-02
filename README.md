@@ -2,9 +2,9 @@
 
 [![ORCID](https://img.shields.io/badge/ORCID-0000--0002--9155--2753-A6CE39?logo=orcid&logoColor=white)](https://orcid.org/0000-0002-9155-2753)
 
-Code and supplementary materials for: > *Title of your research paper*
+Code for: *Fingerprinting PFAS pollution in European surface waters*
 
-The version associated with the manuscript is archived on Zenodo: <<https://doi.org/10.5281/zenodo.12345678>>
+The version associated with the manuscript is archived on Zenodo: 
 
 This repository contains the analysis code and supporting information for the accompanying research paper on PFAS concentrations in monitoring data from across Europe.
 
@@ -18,7 +18,7 @@ The repository is intended to support transparency and reproducibility of the re
 
 The analysis requires:
 
-- Python 3.14 or later
+- Python 3.13 or later
 - The input data files described below
 - Sufficient disk space for the input data and generated outputs
 
@@ -26,7 +26,7 @@ The analysis has been developed for execution from the root directory of this re
 
 ### 1. Install Python
 
-Install Python 3.14 or a later version from:
+Install Python 3.13 or a later version from:
 
 <https://www.python.org/downloads/>
 
@@ -102,7 +102,7 @@ Place the required input data in the directory expected by the analysis code. Th
 
 Before running the analysis, check that:
 
-- the input GeoPackage is present
+- the input Parquet is present
 - all required shapefile components are present
 - the file and directory names match those used in the code and
 - the working directory is the repository root.
@@ -129,38 +129,50 @@ The analysis should create an Excel workbook as well as Figures in the designate
 
 ## Input data directory
 
-| File name                      | Description                                                                  | Reference                                                             |
-| ------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `pfas_data.gpkg`               | GeoPackage containing daily PFAS concentration data                          | [PFAS concentration data](#pfas-concentration-data)                   |
-| `hybas_eu_lev04_v1c.shp`       | ShapeFile containing catchment delineation (level 04) (Lehner & Grill, 2013) | [References](#references)                                             |
-| `hybas_eu_lev12_v1c.shp`       | ShapeFile containing catchment delineation (level 12) (Lehner & Grill, 2013) | [References](#references)                                             |
-| `ne_10m_admin_0_countries.shp` | Country shape file (v5.1.1)                                                  | [Website](https://www.naturalearthdata.com) [References](#references) |
+Following files must be present in the `data/input` directory before execution of the code. Licenses of the respective dataset apply.
+
+| File name                | Description                                                                   | Reference                                           |
+| ------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------- |
+| `pfas_data.parquet`      | Parquet-file containing daily PFAS concentration data                         | [PFAS concentration data](#pfas-concentration-data) |
+| `hybas_eu_lev04_v1c.shp` | ShapeFile containing catchment delineations (level 04) (Lehner & Grill, 2013) | [References](#references)                           |
+| `hybas_eu_lev12_v1c.shp` | ShapeFile containing catchment delineations (level 12) (Lehner & Grill, 2013) | [References](#references)                           |
 
 ### PFAS concentration data
 
-The file `pfas_data.gpkg` contains daily PFAS concentration data compiled from monitoring sites across Europe.
+The file `pfas_data.parquet` contains daily PFAS concentration data compiled from monitoring sites across Europe. The dataset is compiled from existing compilations, research data, and data from authoritive sources. Since dynamic datasets were used, which are regularly updated, we provide a snapshot of the used dataset in `data/concentrations_datasets.zip`. The compilation process is documented in the executable notebook `compilation_of_dataset.ipynb` in the `scripts` folder. Licensing information and doi of the respective datasets are provided in `licence-mapping.toml`. For the creation of `pfas_data.parquet` following files are also needed ot be placed in `data/auxiliary`:
 
-The data are provided in GeoPackage format and can be opened using geographic information system software such as [QGIS](https://qgis.org/) or accessed programmatically using Python libraries such as `geopandas`.
+| File name                      | Description                                                                   | Reference                                                             |
+| ------------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `ne_10m_admin_0_countries.shp` | Country shape file (v5.1.1) by Natural Earth (n.d.)                           | [Website](https://www.naturalearthdata.com) [References](#references) |
+| `hybas_eu_lev01_v1c.shp`       | ShapeFile containing catchment delineations (level 01) (Lehner & Grill, 2013) | [References](#references)                                             |
 
-The GeoPackage contains information including:
 
-| Field          | Type       | Description                                                                                                    |
-| -------------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
-| `date`         | `str`      | Date of sampling                                                                                               |
-| `substance`    | `string`   | PFAS substance name                                                                                            |
-| `conc`         | `float64`  | Measured concentration in ng/L                                                                                 |
-| `unit`         | `str`      | Unit of the concentration (harmonised to ng/L)                                                                 |
-| `less_than`    | `boolean`  | Indicator for observations below the reporting or detection limit. `True` equals observations below the limit. |
-| `geometry`     | `geometry` | Spatial location of the observation (EPSG:4326)                                                                |
-| `dataset_name` | `str`      | Hints at the original dataset.                                                                                 |
+The compiled dataset, i.e. `pfas_data.parquet` is readily provided in `data/input`. The compilation is described in the original research article.
 
-Most of these are adopted from the PFAS datahub (Cordner, 2024).
+
+The file contains information including:
+
+| Field          | Type         | Description                                                                                                    |
+| -------------- | ------------ | -------------------------------------------------------------------------------------------------------------- |
+| `date`         | `datetime64` | Date of sampling                                                                                               |
+| `substance`    | `string`     | PFAS substance name                                                                                            |
+| `conc`         | `float64`    | Measured concentration in ng/L                                                                                 |
+| `unit`         | `str`        | Unit of the concentration (harmonised to ng/L)                                                                 |
+| `less_than`    | `boolean`    | Indicator for observations below the reporting or detection limit. `True` equals observations below the limit. |
+| `geometry`     | `geometry`   | Spatial location of the observation (EPSG:4326)                                                                |
+| `dataset_name` | `str`        | Hints at the original dataset. See `licence-mapping.toml` for details.                                         |
+| `HYBAS_ID04`   | `float64`    | HydroBASIN ID of level 04 basins (see Shapefiles section)                                                      |
+| `basin`        | `str`        | Basin name derived from major rivers in a given level 04 basin                                                 |
+| `lat`          | `float64`    | Latitude                                                                                                       |
+| `lon`          | `float64`    | Longitude                                                                                                      |
+
+Most fields are adopted from the PFAS datahub (Cordner, 2024). The PFAS datahub provides a `country` field, which we decided to re-compute during the analysis to apply one consistent method.
 
 The data represent the harmonised dataset used for the analyses presented in the associated manuscript. Daily records should be interpreted as observations reported or aggregated at the daily level. They do not necessarily represent continuous measurements throughout each day. The data may contain observations below the analytical limit of detection. These records should not automatically be interpreted as measurements of zero concentration. The treatment of non-detects and values below the limit of detection is described in the manuscript and in the accompanying analysis code.
 
-### HYBAS shapefiles
+### Shapefiles
 
-The HYBAS datasets require their associated metadata and component files. A shapefile is not a single file: the `.shp` file must normally be accompanied by files such as:
+The HydroBASINS datasets require their associated metadata and component files. A shapefile is not a single file: the `.shp` file must normally be accompanied by files such as:
 
 ```plain
 .shx
@@ -168,7 +180,7 @@ The HYBAS datasets require their associated metadata and component files. A shap
 .prj
 ```
 
-For example, the level 12 dataset may include:
+For example, the HydroBASINS level 12 dataset may include:
 
 ```plain
 hybas_eu_lev12_v1c.shp
@@ -177,14 +189,14 @@ hybas_eu_lev12_v1c.dbf
 hybas_eu_lev12_v1c.prj
 ```
 
-The same applies to the level 04 dataset.
+The same applies to any other shapesfiles.
 
-Please refer to the original data source and the (References) section for the relevant metadata and licensing information.
+Please refer to the original data source and the References section for the relevant metadata and licensing information.
 
 ## References
 
-Cordner, A., Brown, P., Cousins, I. T., Scheringer, M., Martinon, L., Dagorn, G., Aubert, R., Hosea, L., Salvidge, R., Felke, C., Tausche, N., Drepper, D., Liva, G., Tudela, A., Delgado, A., Salvatore, D., Pilz, S., & Horel, S. (2024). PFAS Contamination in Europe: Generating Knowledge and Mapping Known and Likely Contamination with “Expert-Reviewed” Journalism. _Environmental Science & Technology_, _58_(15), 6616–6627. [https://doi.org/10.1021/acs.est.3c09746](https://doi.org/10.1021/acs.est.3c09746)
+Cordner, A., Brown, P., Cousins, I. T., Scheringer, M., Martinon, L., Dagorn, G., Aubert, R., Hosea, L., Salvidge, R., Felke, C., Tausche, N., Drepper, D., Liva, G., Tudela, A., Delgado, A., Salvatore, D., Pilz, S., & Horel, S. (2024). PFAS Contamination in Europe: Generating Knowledge and Mapping Known and Likely Contamination with “Expert-Reviewed” Journalism. *Environmental Science & Technology*, *58*(15), 6616–6627. [https://doi.org/10.1021/acs.est.3c09746](https://doi.org/10.1021/acs.est.3c09746)
 
 Lehner, B., & Grill, G. (2013). Global river hydrography and network routing: Baseline data and new approaches to study the world’s large river systems. Hydrological Processes, 27(15), 2171–2186. <https://doi.org/10.1002/hyp.9740>
 
-Natural Earth. (n.d.). _Natural Earth vector data, 1:10m scale_ (Version 5.1.1) [Dataset]. Retrieved April 23, 2026, from [www.naturalearthdata.com](https://doi.org/www.naturalearthdata.com)
+Natural Earth. (n.d.). *Natural Earth vector data, 1:10m scale* (Version 5.1.1) [Dataset]. Retrieved April 23, 2026, from [www.naturalearthdata.com](https://doi.org/www.naturalearthdata.com)

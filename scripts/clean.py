@@ -6,7 +6,7 @@ from pathlib import (
 RESULTS_DIR = Path("results")
 LOGS_DIR = Path("logs")
 
-CLEAR_LIST = [RESULTS_DIR, LOGS_DIR]
+CLEAR_LIST = [RESULTS_DIR]
 
 
 def clean_directory(directory: Path) -> None:

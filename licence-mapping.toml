@@ -1,0 +1,38 @@
+[dataset]
+
+[dataset.PFAS_DataHub]
+bib_ref = "cordner2024"
+licence = "Freely usable as stated on their webpage"
+doi = "10.1021/acs.est.3c09746"
+url = ["https://pdh.cnrs.fr/en/", "https://foreverpollution.eu/"]
+accessed = "2026-09-14"
+
+[dataset._BFG]
+licence = "CC BY-NC 4.0"
+url = ["https://iksr.bafg.de/iksr/", "https://fgg-rhein.bafg.de/dkrr"]
+accessed = "2026-09-15"
+
+[dataset._Basel_River]
+licence = "Open Government Data (OGD)"
+url = ["https://data.bs.ch/explore/dataset/100069/table/?sort=probenahmedatum_date", "https://data.bs.ch/explore/dataset/100066/table/?sort=probenahmedatum_date"]
+accessed = "2026-09-23"
+
+[dataset._Rijkswaterstaat_Waterinfo]
+licence = "CC0"
+url = "https://waterinfo.rws.nl/"
+accessed = "2026-09-23"
+
+[dataset._ELWAS]
+licence = "Data licence Germany - Zero - Version 2.0"
+url = "https://www.elwasweb.nrw.de/elwas-web"
+accessed = "2026-10-01"
+
+[dataset._kali2025]
+licence = "CC BY 4.0"
+doi = "10.5878/hpqb-k059"
+accessed = "2025-11-25"
+
+[dataset._teymoorian2025]
+licence = "CC BY 4.0"
+doi = "10.1021/acs.estlett.4c01126"
+accessed = "2026-09-25"

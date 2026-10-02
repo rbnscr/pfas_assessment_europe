@@ -24,11 +24,28 @@ import seaborn as sns
 from matplotlib.ticker import (
     FuncFormatter,
 )
+from sklearn.cluster import DBSCAN
+
 
 logger = logging.getLogger(__name__)
 
+# 'cluster' function adapted from the PFAS DataHub https://colab.research.google.com/drive/1AL9Jw3AzcIpbhckIr2B0zEnc5NQ8nP9Z#scrollTo=lzMKd6HWOdAU 
+def cluster(df, max_dist):
+    df = df.copy()
+    kms_per_radian = 6371.0088
+    eps_rad = max_dist / kms_per_radian
+    # represent points consistently as (lat, lon) and convert to radians to fit using haversine metric
+    coords = df[['lat', 'lon']].values
+    db = DBSCAN(eps=eps_rad, min_samples=1, algorithm='ball_tree', metric='haversine').fit(np.radians(coords))
+    cluster_labels = db.labels_
+    df['cluster_label'] = cluster_labels
+    num_clusters = len(set(cluster_labels))
 
-def general_info(gdf, gdf_timeframe, save_path: Path):
+    # all done, print outcome
+    logger.info(f'Clustered {len(df):,} points down to {num_clusters} clusters, for {100*(1 - float(num_clusters) / len(df)):.2f}% compression.')
+    return df
+
+def general_info(gdf_timeframe, save_path: Path):
     """Generate summary statistics and plots for PFAS monitoring data.
 
     The function calculates substance-specific detection frequencies and
@@ -42,8 +59,6 @@ def general_info(gdf, gdf_timeframe, save_path: Path):
     :func:`combined_plot` for visualisation.
 
     Args:
-        gdf: GeoDataFrame containing the complete PFAS dataset. It must contain
-            ``year`` and ``geometry`` columns.
         gdf_timeframe: GeoDataFrame containing the subset of observations to be
             analysed. It must contain ``substance``, ``less_than``, ``conc``,
             ``geometry``, ``dayofyear``, and ``year`` columns.
@@ -73,27 +88,25 @@ def general_info(gdf, gdf_timeframe, save_path: Path):
             "L_PFOA": "Linear PFOA",
         }
     )
-    start_year = gdf.year.min()
-    end_year = gdf.year.max()
-    n_meas_full = len(gdf)
-    n_loc_full = gdf.geometry.nunique()
 
     start_year_tf = gdf_timeframe.year.min()
     end_year_tf = gdf_timeframe.year.max()
     n_meas_full_tf = len(gdf_timeframe)
     n_loc_full_tf = gdf_timeframe.geometry.nunique()
+    n_quant_meas_full_tf = len(gdf_timeframe[~gdf_timeframe.less_than])
+    n_loc_meas_full_tf = gdf_timeframe[~gdf_timeframe.less_than].geometry.nunique()
 
-    logger.info("-- Full Dataset information --")
-    logger.info(f"Number of samples: {n_meas_full:,}")
-    logger.info(f"Number of site: {n_loc_full:,}")
-    logger.info(f"Start year: {start_year:.0f}")
-    logger.info(f"End year: {end_year:.0f}")
-
-    logger.info("-- Cropped Dataset information --")
-    logger.info(f"Number of samples: {n_meas_full_tf:,}")
-    logger.info(f"Number of site: {n_loc_full_tf:,}")
+    logger.info("-- Dataset information --")
     logger.info(f"Start year: {start_year_tf:.0f}")
     logger.info(f"End year: {end_year_tf:.0f}")
+    logger.info(f"Number of samples: {n_meas_full_tf:,}")
+    logger.info(f"Number of site: {n_loc_full_tf:,}")
+    logger.info(fr"Samples above LOD: {n_quant_meas_full_tf:,} ({n_quant_meas_full_tf/n_meas_full_tf*100:.1f}~\%)")
+    logger.info(f"Number of sites with samples over LOD: {n_loc_meas_full_tf:,}")
+
+    # On the PFAS Data Hub website is stated, that counting each individual coordinate as sampling location leads to an overestimation of the sampling. They show an example of clustering using K-MEANS, with a 200m minimal distance between 2 clusters
+    df_cluster = gdf_timeframe.drop_duplicates(subset=['lat', 'lon'])
+    clustered = cluster(df_cluster, max_dist=0.2)
 
     gdf_timeframe_dropped = gdf_timeframe[~gdf_timeframe.less_than]
     df_plot = gdf_timeframe_dropped[["substance", "conc"]]
@@ -140,22 +153,48 @@ def general_info(gdf, gdf_timeframe, save_path: Path):
         index="site", columns="substance", values="conc", aggfunc="median"
     )
 
-    pfas_wide["PFAS4"] = pfas_wide[pfas_four].sum(axis=1, min_count=1)
-    pfas_wide["PFAS_avail"] = pfas_wide[pfas_sum].sum(axis=1, min_count=1)
+    pfas_wide["PFAS4"] = pfas_wide[pfas_four].sum(axis=1, min_count=4)
+    pfas_wide["PFAS_avail"] = pfas_wide[pfas_sum].sum(axis=1, min_count=10)
 
+    res = []
+    for i in range(1,21):
+        dat = np.nan
+        dat = pfas_wide[pfas_sum].sum(axis=1, min_count=i).dropna()
+        # print(dat)
+        res_dict = {
+            "i" : i,
+            "n" : len(dat),
+            "median" : dat.median(),
+            "mean" : dat.mean(),
+            "exceed100" : len(dat[dat>100])
+        }
+        res.append(res_dict)
+    # pd.DataFrame(res).to_excel("pfassum.xlsx", index=False)
+    # logger.info("'Sum of 20 PFAS' dependency on number of included substances (i)")
+    # logger.info(pd.DataFrame(res).set_index("i"))
+
+    # print(pfas_wide)
     df_pfas4_long = (
         pfas_wide[["PFAS4"]]
         .rename(columns={"PFAS4": "conc"})
-        .assign(substance=r"$\Sigma_4$PFAS")
+        .assign(substance="Sum of 4 PFAS")
         .reset_index()
     )
-
+    # print(df_pfas4_long)
+    # pfas_wide[pfas_four].to_excel("pfas4_input.xlsx")
+    # pfas_wide[pfas_sum].to_excel("pfas20_input.xlsx")
+    # df_pfas4_long.to_excel("pfas4.xlsx")
     df_pfassum_long = (
         pfas_wide[["PFAS_avail"]]
         .rename(columns={"PFAS_avail": "conc"})
-        .assign(substance=r"$\Sigma_{20}$PFAS")
+        .assign(substance="Sum of 20 PFAS")
         .reset_index()
     )
+
+    logger.info(f"Number of matches for 'Sum of 4 PFAS': {len(df_pfas4_long.dropna())}")
+    logger.info(f"Number of 'Sum of 4 PFAS' > 2ng/L: {len(df_pfas4_long[df_pfas4_long.conc > 2])}")
+    logger.info(f"Number of 'Sum of 4 PFAS' > 20ng/L: {len(df_pfas4_long[df_pfas4_long.conc > 20])}")
+    logger.info(f"Number of matches for 'Sum of 20 PFAS': {len(df_pfassum_long.dropna())}")
 
     # append to plot dataframe
     df_plot = pd.concat(
@@ -164,8 +203,10 @@ def general_info(gdf, gdf_timeframe, save_path: Path):
             df_pfas4_long[["substance", "conc"]],
             df_pfassum_long[["substance", "conc"]],
         ],
-        ignore_index=True,
+        ignore_index=True
     )
+    count = ((df_plot["substance"] == "TFA") & (df_plot["conc"] > 9000)).sum()
+    logger.info("Number of TFA > 9,000 ng/L: %d", count)
 
     df_plot["substance"] = df_plot["substance"].replace(
         {
@@ -176,6 +217,10 @@ def general_info(gdf, gdf_timeframe, save_path: Path):
             "L_PFOA": "Linear PFOA",
         }
     )
+    logger.info("Substance/Group Median:")
+    logger.info(df_plot.groupby('substance')['conc'].median())
+    logger.info("Substance/Group Mean:")
+    logger.info(df_plot.groupby('substance')['conc'].mean())
 
     sub_detected = (
         gdf_timeframe[~gdf_timeframe["less_than"]]
@@ -183,6 +228,7 @@ def general_info(gdf, gdf_timeframe, save_path: Path):
         .nunique()
         .reset_index(name="n_substances")
     )
+    
 
     geom_detected = sub_detected.groupby("n_substances").size()
 
@@ -192,13 +238,16 @@ def general_info(gdf, gdf_timeframe, save_path: Path):
         .nunique()
         .reset_index(name="n_substances")
     )
+    print("Sampling site(s) with most detected substances:\n", sub_detected[sub_detected.n_substances == max(sub_detected.n_substances)])
+    # print(sub_total[sub_total.n_substances == max(sub_total.n_substances)])
+    # exit()
 
     geom_total = sub_total.groupby("n_substances").size()
     geom_counts = (
         pd.concat([geom_detected, geom_total], axis=1).fillna(0)
     ).sort_index()
 
-    geom_counts.columns = ["Detected", "Total"]
+    geom_counts.columns = ["Detected", "Monitored"]
 
     combined_plot(df_plot, counts, geom_counts, save_path)
     logger.info("--- Finished general information generation ---")
@@ -214,9 +263,9 @@ def combined_plot(df_plot, counts, geom_counts, save_path: Path) -> None:
 
     The generated figures are saved as:
 
-    - ``substances_combined_alt41.pdf``: Detection frequencies and
+    - ``main_substances_combined_1.pdf``: Detection frequencies and
       concentration distributions.
-    - ``substances_combined_alt42.pdf``: Detected and monitored substances by
+    - ``main_substances_combined_2.pdf``: Detected and monitored substances by
       sampling site.
 
     Args:
@@ -261,16 +310,13 @@ def combined_plot(df_plot, counts, geom_counts, save_path: Path) -> None:
         "PFDoDS",
         "PFTrDS",
         "Linear PFOA",
-        "Linear PFBS",
-        "Linear PFHpS",
-        "Linear PFHxS",
         "Linear PFOS",
         "6:2 FTCA",
         "4:2 FTS",
         "6:2 FTS",
         "8:2 FTS",
         "HFPO-DA",
-        "ADONA",
+        "DONA",
         "FOSA",
         "N-Et-FOSA",
         "N-MeFOSAA",
@@ -287,7 +333,6 @@ def combined_plot(df_plot, counts, geom_counts, save_path: Path) -> None:
     counts.frequency.plot(kind="bar", ax=ax_top, width=0.8, color=color_detect)
 
     for i, (_, row) in enumerate(counts.iterrows()):
-
         total = row.total_n
         freq = row.frequency
         ax_top.text(
@@ -327,8 +372,8 @@ def combined_plot(df_plot, counts, geom_counts, save_path: Path) -> None:
         medianprops=dict(color="black", linewidth=1.2),
     )
 
-    ax_bottom.set_ylabel("Concentration (ng L$^{-1}$)")
-    ax_bottom.set_xlabel("Substance / Group")
+    ax_bottom.set_ylabel("Concentration (ngL$^{-1}$)")
+    ax_bottom.set_xlabel("Substance")
     ax_bottom.set_yscale("log")
     ax_bottom.tick_params(axis="x", rotation=90)
     ax_bottom.grid(axis="y", alpha=0.15, linewidth=0.6)
@@ -336,7 +381,7 @@ def combined_plot(df_plot, counts, geom_counts, save_path: Path) -> None:
     ax_bottom.spines[["right", "top"]].set_visible(False)
 
     ax_top.text(
-        -0.06,
+        -0.07,
         1.05,
         "a",
         transform=ax_top.transAxes,
@@ -345,7 +390,7 @@ def combined_plot(df_plot, counts, geom_counts, save_path: Path) -> None:
         va="top",
     )
     ax_bottom.text(
-        -0.06,
+        -0.07,
         1.05,
         "b",
         transform=ax_bottom.transAxes,
@@ -354,13 +399,52 @@ def combined_plot(df_plot, counts, geom_counts, save_path: Path) -> None:
         va="top",
     )
 
-    plt.subplots_adjust(left=0.1, hspace=0.28, right=0.95, top=0.88, bottom=0.05)
-    plt.savefig(save_path / "substances_combined_alt41.pdf", bbox_inches="tight")
+    plt.subplots_adjust(
+        left=0.1, 
+        hspace=0.35, # 0.28
+        right=0.95, 
+        top=0.88, 
+        bottom=0.05
+        )
+    plt.savefig(save_path / "main_substances_combined_1.pdf", bbox_inches="tight")
     plt.close(fig)
     # plt.show()
+    
+    fig, ax = plt.subplots(figsize=(7, 4.5)) # 13, 8
+    logger.info("\n"+geom_counts.rename_axis("n_substances").reset_index().to_string(index = False, formatters={ 
+        "Detected": lambda x: f"{x:,.0f}", 
+        "Monitored": lambda x: f"{x:,.0f}", 
+        }))
 
-    fig, ax = plt.subplots(figsize=(13, 8))
+    # window, that contains ~50% of monitored substances
+    s = geom_counts["Monitored"].sort_index()
+    values = s.to_numpy()
+    target = values.sum() / 2
 
+    left = 0
+    window_sum = 0
+    best = None # (length, start position, end position, sum)
+
+    for right, value in enumerate(values):
+        window_sum += value
+
+        while window_sum >= target:
+            length = right - left + 1
+            if best is None or length < best[0]:
+                best = (length, left, right, window_sum)
+
+            window_sum -= values[left]
+            left += 1
+
+    if best is None:
+        print("No range found.")
+    else:
+        _, start, end, range_sum = best
+        print("Index range:", s.index[start], "to", s.index[end])
+        print("Range sum:", range_sum)
+    # End
+
+    # Plotting
     geom_counts.plot(
         kind="bar",
         ax=ax,
@@ -370,26 +454,36 @@ def combined_plot(df_plot, counts, geom_counts, save_path: Path) -> None:
         edgecolor="none",
         linewidth=0.2,
     )
+    
 
     ax.grid(axis="y", alpha=0.15, linewidth=0.6)
 
     ax.yaxis.set_major_formatter(FuncFormatter(lambda x, pos: f"{x:,.0f}"))
 
-    ax.tick_params(axis="x", labelrotation=0)  # , labelsize=11)
+    ax.tick_params(axis="x", labelrotation=90)  # , labelsize=11)
     ax.tick_params(axis="y", labelrotation=0)  # , labelsize=11)
     ax.spines[["right", "top"]].set_visible(False)
     ax.grid(axis="y", alpha=0.15, linewidth=0.6)
+    # ax.legend(
+    #     ["Detected", "Monitored"],
+    #     title="",
+    #     frameon=False,
+    #     fontsize=12,
+    #     loc="upper right",
+    # )
     ax.legend(
         ["Detected", "Monitored"],
         title="",
         frameon=False,
         fontsize=12,
-        loc="upper right",
+        loc="upper center",
+        # bbox_to_anchor=(0.5, -0.40),
+        ncol = 2
     )
     ax.set_xlabel("Number of substances")  # , fontsize=11
     ax.set_ylabel("Number of sampling sites")  # , fontsize=11
     plt.subplots_adjust(left=0.1, hspace=0.28, right=0.95, top=0.88, bottom=0.05)
-    plt.savefig(save_path / "substances_combined_alt42.pdf", bbox_inches="tight")
+    plt.savefig(save_path / "main_substances_combined_2.pdf", bbox_inches="tight")
     # plt.show()
 
 
@@ -397,17 +491,17 @@ def main() -> None:
     input_path = Path("data/input/")
     # gdf: gpd.GeoDataFrame = gpd.read_file(input_path.joinpath("test_cutout.gpkg"))
     gdf = gpd.read_file(input_path.joinpath("pfas_data.gpkg"))
-    basins: gpd.GeoDataFrame = gpd.read_file(
-        input_path.joinpath("hybas_eu_lev12_v1c.shp")
-    )
-    gdf["month"] = pd.to_datetime(gdf["date"], format="ISO8601").dt.month
+    # basins: gpd.GeoDataFrame = gpd.read_file(
+    #     input_path.joinpath("hybas_eu_lev12_v1c.shp")
+    # )
+    # gdf["month"] = pd.to_datetime(gdf["date"], format="ISO8601").dt.month
     gdf["dayofyear"] = pd.to_datetime(gdf["date"], format="ISO8601").dt.dayofyear
     save_path = Path("results/")
 
-    basins = basins.to_crs(gdf.crs)  # pyright: ignore[reportArgumentType]
+    # basins = basins.to_crs(gdf.crs)  # pyright: ignore[reportArgumentType]
     gdf_timeframe = gdf[(gdf.year > 2018)]
 
-    general_info(gdf, gdf_timeframe, save_path)
+    general_info(gdf_timeframe, save_path)
 
 
 if __name__ == "__main__":

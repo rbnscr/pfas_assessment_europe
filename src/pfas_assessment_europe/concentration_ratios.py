@@ -18,6 +18,7 @@ from scipy.stats import (
     ttest_rel,
     wilcoxon,
 )
+from pfas_assessment_europe.constants import HYBAS_RIVER_RENAME
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def boxplot_ratios(df: pd.DataFrame, substances: list[tuple]):
 
     Args:
         df: DataFrame containing substance concentration columns and a
-            ``HYBAS_ID`` column.
+            ``basin`` column.
         substances: Iterable of two-element tuples. Each tuple contains the
             numerator and denominator substance column names.
 
@@ -40,7 +41,7 @@ def boxplot_ratios(df: pd.DataFrame, substances: list[tuple]):
 
         - ``value``: Calculated concentration ratio.
         - ``ratio``: Ratio name in the format ``"substance1/substance2"``.
-        - ``HYBAS_ID``: Basin identifier associated with each observation.
+        - ``basin``: Basin identifier associated with each observation.
     """
     dfs = []
 
@@ -49,7 +50,7 @@ def boxplot_ratios(df: pd.DataFrame, substances: list[tuple]):
         df_ = df.dropna(subset=[sub1, sub2]).copy()
         ratio = (df_[sub1] / df_[sub2]).to_frame(name="value")
         ratio["ratio"] = ratio_name
-        ratio["HYBAS_ID"] = df_["HYBAS_ID"].values
+        ratio["basin"] = df_["basin"].values
         dfs.append(ratio)
     df_ratios = pd.concat(dfs, ignore_index=True)
     return df_ratios
@@ -109,12 +110,13 @@ def test_significant_difference(df: pd.DataFrame, substances: list[tuple]):
     return pd.DataFrame(results)
 
 
-def conc_ratio(gdf, basins, save_path: Path):
+def conc_ratio(
+    gdf, 
+    save_path: Path
+    ):
     """Generate PFAS concentration-ratio plots by hydrological basin.
 
-    Sampling locations are spatially joined to level-04 HydroBASINS polygons.
-    Locations that do not fall within a basin are assigned to the nearest basin.
-    The function then calculates median PFAS concentrations per sampling event,
+    The function calculates median PFAS concentrations per sampling event,
     computes concentration ratios for predefined PFAS pairs, performs paired
     statistical tests, and saves a boxplot and heatmap as PDF files.
 
@@ -130,74 +132,13 @@ def conc_ratio(gdf, basins, save_path: Path):
         gdf: GeoDataFrame containing PFAS observations. It must contain
             ``year``, ``dayofyear``, ``geometry``, ``less_than``, ``substance``,
             and ``conc`` columns.
-        basins: GeoDataFrame containing basin polygons and a ``HYBAS_ID``
-            column.
         save_path: Directory in which the generated PDF plots are saved.
 
     Returns:
         None. The plots are saved to ``save_path``.
     """
     logger.info("--- Starting Concentration Ratios ---")
-    lev04_rename = {
-        2040020320: "Garonne",
-        2040016230: "Rhône / Ebro",
-        2040021030: "Loire",
-        2040022150: "Seine",
-        2040021040: "Brittany / Normandy",
-        2040022160: "Maas",
-        2040023010: "Rhine",
-        2040023020: "Weser / Ems",
-        2040048790: "United Kingdom",
-        2040014550: "Tiber",
-        2040046500: "Sicily",
-        2040012730: "Po",
-        2040047500: "Corsica",
-        2040543160: "Lower Danube",
-        2040539930: "Upper Danube",
-        2040024170: "Elbe",
-        2040026060: "Oder",
-        2040026930: "Nemunas",
-        2040031500: "Baltic (Southern Sweden)",
-        2040028670: "Baltic (Western Finland)",
-        2040033480: "Norway",
-        2040028310: "Newa",
-        2040027320: "Daugava",
-        2040026920: "Nyoman",
-        2040027330: "Narva",
-        2040019150: "Duero",
-        2040019160: "Sil",
-        2040009230: "Mediterranean Balkans",
-        2040008490: "Prut",
-        2040548500: "Tysa",
-        2040540100: "Drava",
-        2040548700: "Mura-Drava-Danube",
-        2040555780: "Sava",
-    }
-    id_name = "HYBAS_ID"
-    basins[id_name] = basins[id_name].astype("object")
-    basins.loc[~basins[id_name].isin(lev04_rename.keys()), id_name] = "Other"
-    basins[id_name] = basins[id_name].replace(lev04_rename)
-    basins[id_name] = basins[id_name].astype("string")
-
-    within = gpd.sjoin(
-        gdf[gdf.year > 2018].to_crs("EPSG:3035"),
-        basins[[id_name, "geometry"]].to_crs("EPSG:3035"),
-        how="left",
-        predicate="within",
-    )
-
-    missing = within[within[id_name].isna()].drop(columns=id_name)
-
-    if "index_right" in missing.columns:
-        missing = missing.drop(columns="index_right")
-
-    nearest = gpd.sjoin_nearest(
-        missing.to_crs("EPSG:3035"),
-        basins[[id_name, "geometry"]].to_crs("EPSG:3035"),
-        how="left",
-    )
-    gdf_joined = pd.concat([within[within[id_name].notna()], nearest])
-
+    gdf_joined = gdf.copy()
     gdf_joined["site"] = (
         gdf_joined["dayofyear"].astype(int).astype(str)
         + "_"
@@ -208,7 +149,7 @@ def conc_ratio(gdf, basins, save_path: Path):
     pfas_wide = gdf_joined[~gdf_joined.less_than].pivot_table(
         index="site", columns="substance", values="conc", aggfunc="median"
     )
-    geom = gdf_joined.groupby("site")["HYBAS_ID"].first()
+    geom = gdf_joined.groupby("site")["basin"].first()
     pfas_wide = pfas_wide.join(geom)
 
     subst_for_bp_rat = [
@@ -229,8 +170,9 @@ def conc_ratio(gdf, basins, save_path: Path):
 
     df_ratios = boxplot_ratios(df=pfas_wide, substances=subst_for_bp_rat)
     df_greater = test_significant_difference(df=pfas_wide, substances=subst_for_bp_rat)
-    logger.info(df_greater)
+    # logger.info(df_greater)
 
+    logger.info(df_ratios.groupby("ratio")["value"].median())
     fig, ax = plt.subplots(figsize=(10, 6))
 
     sns.boxplot(
@@ -246,7 +188,7 @@ def conc_ratio(gdf, basins, save_path: Path):
         capprops=dict(color="black", linewidth=0.8),
         medianprops=dict(color="black", linewidth=1.2),
     )
-
+    ax.axhline(1, lw=0.5)
     ax.set_ylabel("Concentration ratios (-)")
     ax.set_xlabel("Substances")
     ax.set_yscale("log")
@@ -264,7 +206,7 @@ def conc_ratio(gdf, basins, save_path: Path):
 
     fig, ax = plt.subplots(figsize=(10, 11))
 
-    heatmap_data = df_ratios.groupby(["HYBAS_ID", "ratio"])["value"].median().unstack()
+    heatmap_data = df_ratios.groupby(["basin", "ratio"])["value"].median().unstack()
 
     ratio_order = []
     for sub1, sub2 in subst_for_bp_rat:
@@ -305,17 +247,21 @@ def main() -> None:
     input_path = Path("data/input/")
 
     gdf = gpd.read_file(input_path.joinpath("pfas_data.gpkg"))
-    basins: gpd.GeoDataFrame = gpd.read_file(
-        input_path.joinpath("hybas_eu_lev04_v1c.shp")
-    )
+    # basins: gpd.GeoDataFrame = gpd.read_file(
+    #     input_path.joinpath("hybas_eu_lev04_v1c.shp")
+    # )
     gdf["month"] = pd.to_datetime(gdf["date"], format="ISO8601").dt.month
     gdf["dayofyear"] = pd.to_datetime(gdf["date"], format="ISO8601").dt.dayofyear
     save_path = Path("results/")
 
-    basins = basins.to_crs(gdf.crs)  # pyright: ignore[reportArgumentType]
+    # basins = basins.to_crs(gdf.crs)  # pyright: ignore[reportArgumentType]
     gdf_timeframe = gdf[(gdf.year > 2018)]
 
-    conc_ratio(gdf_timeframe, basins, save_path)
+    conc_ratio(
+        gdf_timeframe, 
+        # basins, 
+        save_path
+        )
 
 
 if __name__ == "__main__":

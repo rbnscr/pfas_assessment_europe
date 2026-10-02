@@ -3,9 +3,9 @@
 This module provides visualisations of PFAS monitoring locations across
 European HydroBASINS regions. It generates:
 
-- A map showing the number of monitored substances at each monitoring site.
+- A map showing the number of monitored substances at each monitoring site
 - Maps identifying sites with concentrations at or above the 85th percentile
-  for selected PFAS substances.
+  for selected PFAS substances
 
 The generated maps are saved as PNG or PDF files in the specified output
 directory.
@@ -25,15 +25,16 @@ import pandas as pd
 from matplotlib.patches import (
     Rectangle,
 )
-
-# from matplotlib.transforms import (
-#     Bbox,
-# )
+from pfas_assessment_europe.constants import HYBAS_RIVER_RENAME
 
 logger = logging.getLogger(__name__)
 
 
-def eu_map(gdf: gpd.GeoDataFrame, basins: gpd.GeoDataFrame, save_path: Path) -> None:
+def eu_map(
+    gdf: gpd.GeoDataFrame, 
+    basins: gpd.GeoDataFrame, 
+    save_path: Path
+    ) -> None:
     """Create and save a map of PFAS monitoring coverage across Europe.
 
     The function selects monitoring sites from observations collected after
@@ -46,7 +47,7 @@ def eu_map(gdf: gpd.GeoDataFrame, basins: gpd.GeoDataFrame, save_path: Path) -> 
     coordinates. Monitoring sites are coloured according to the number of
     monitored substances.
 
-    The resulting map is saved as ``introduction_map.png`` in ``save_path``.
+    The resulting map is saved as ``main_introduction_map.jpg`` in ``save_path``.
 
     Args:
         gdf: GeoDataFrame containing PFAS observations. It must include
@@ -62,41 +63,7 @@ def eu_map(gdf: gpd.GeoDataFrame, basins: gpd.GeoDataFrame, save_path: Path) -> 
         the logger.
     """
     logger.info("--- Starting EU Map ---")
-    lev04_rename = {
-        2040020320: "Garonne",
-        2040016230: "Rhône / Ebro",
-        2040021030: "Loire",
-        2040022150: "Seine",
-        2040021040: "Brittany / Normandy",
-        2040022160: "Maas",
-        2040023010: "Rhine",
-        2040023020: "Weser / Ems",
-        2040048790: "United Kingdom",
-        2040014550: "Tiber",
-        2040046500: "Sicily",
-        2040012730: "Po",
-        2040047500: "Corsica",
-        2040543160: "Lower Danube",
-        2040539930: "Upper Danube",
-        2040024170: "Elbe",
-        2040026060: "Oder",
-        2040026930: "Nemunas",
-        2040031500: "Baltic (Southern Sweden)",
-        2040028670: "Baltic (Western Finland)",
-        2040033480: "Norway",
-        2040028310: "Newa",
-        2040027320: "Daugava",
-        2040026920: "Nyoman",
-        2040027330: "Narva",
-        2040019150: "Duero",
-        2040019160: "Sil",
-        2040009230: "Mediterranean Balkans",
-        2040008490: "Prut",
-        2040548500: "Tysa",
-        2040540100: "Drava",
-        2040548700: "Mura-Drava-Danube",
-        2040555780: "Sava",
-    }
+    lev04_rename = HYBAS_RIVER_RENAME
     id_name = "HYBAS_ID"
     basins["HYBAS_ID_ID"] = basins["HYBAS_ID"].copy()
 
@@ -134,7 +101,7 @@ def eu_map(gdf: gpd.GeoDataFrame, basins: gpd.GeoDataFrame, save_path: Path) -> 
 
     logger.info("Start plotting")
     fig, ax = plt.subplots(
-        figsize=(9.5, 8),
+        figsize=(7, 8), # 9.5, 8
         subplot_kw={
             "projection": ccrs.PlateCarree(central_longitude=10),
             "frameon": False,
@@ -219,6 +186,8 @@ def eu_map(gdf: gpd.GeoDataFrame, basins: gpd.GeoDataFrame, save_path: Path) -> 
         # "Drava" : [(-5.5, 50.5), (15.0 , 46.599)],
         "Mura-Drava-Danube": [(24.429, 50.352), (19.108, 45.736)],
         # "Sava" : [(-5.5, 50.5), (6.2, 50.9)]
+        "Tagus" : [(-5, 39.75), (-8, 40)], # No arrow, but moving the label
+        "Guadiana" : [(-5, 38.75), (-8, 40)],
     }
 
     no_arrow = [
@@ -233,6 +202,8 @@ def eu_map(gdf: gpd.GeoDataFrame, basins: gpd.GeoDataFrame, save_path: Path) -> 
         "Drava",
         "Lower Danube",
         "Upper Danube",
+        "Guadiana",
+        "Tagus"
     ]
 
     for _, row in basins_with_name.iterrows():
@@ -270,8 +241,8 @@ def eu_map(gdf: gpd.GeoDataFrame, basins: gpd.GeoDataFrame, save_path: Path) -> 
     gl.xlabel_style = {"size": 10}
     gl.ylabel_style = {"size": 10}
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
-    logger.info(f"Saving map to {save_path / "introduction_map.png"}")
-    fig.savefig(save_path / "introduction_map.png", bbox_inches="tight", dpi=600)
+    logger.info(f"Saving map to {save_path / "main_introduction_map.jpg"}")
+    fig.savefig(save_path / "main_introduction_map.jpg", bbox_inches="tight", dpi=600)
     plt.close(fig)
 
 
@@ -288,7 +259,7 @@ def hotspot_maps(
     A separate map is generated for each selected substance. Each map shows
     all sampling sites for the substance, hotspot sites, and the HydroBASINS
     regions containing sampling locations. The resulting maps are saved as
-    PDF files named ``appendix_hotspot_<substance>.pdf`` in ``save_path``.
+    JPG files named ``appendix_hotspot_<substance>.jpg`` in ``save_path``.
 
     Args:
         gdf: GeoDataFrame containing PFAS observations. It must include
@@ -300,7 +271,7 @@ def hotspot_maps(
         save_path: Directory in which the hotspot maps are saved.
 
     Returns:
-        None. One PDF map is saved for each selected substance.
+        None. One JPG map is saved for each selected substance.
 
     Notes:
         Observations marked as below the limit of detection are excluded from
@@ -384,11 +355,39 @@ def hotspot_maps(
         logger.info(f"Number of sites indicating a hotspot: {len(gdf_subst_high)}")
         logger.info(f"Number of sites: {len(gdf_all_geom)}")
 
-        europe_joined = gdf_all_geom.sjoin(europe, predicate="within")
-        europe_with_points = europe.loc[europe_joined.index_right.unique()]
+        # europe_joined = gdf_all_geom.sjoin(europe, predicate="within")
 
+        # eu_crs = europe.crs
+        gdf_crs = gdf_all_geom.crs
+        # europe_joined = gdf_all_geom.to_crs("EPSG:3035").sjoin_nearest(europe.to_crs("EPSG:3035"), how="left")
+
+        # europe_joined = europe_joined.to_crs(gdf_crs)
+        within = gpd.sjoin(
+            gdf_all_geom.to_crs("EPSG:3035"),
+            europe[["ADMIN", "geometry"]].to_crs("EPSG:3035"),
+            how="left",
+            predicate="within",
+        )
+    
+        missing = within[within["ADMIN"].isna()].drop(columns="ADMIN")
+    
+        if "index_right" in missing.columns:
+            missing = missing.drop(columns="index_right")
+    
+        nearest = gpd.sjoin_nearest(
+            missing.to_crs("EPSG:3035"),
+            europe[["ADMIN", "geometry"]].to_crs("EPSG:3035"),
+            how="left",
+        )
+        europe_joined = pd.concat([within[within["ADMIN"].notna()], nearest])
+        # europe_joined = europe_joined.to_crs(gdf_all_geom.crs)
+        # print(europe_joined)
+        # print(gdf_all_geom.crs)
+        # gdf_all_geom = gdf_all_geom.to_crs(gdf_crs)
+        europe_with_points = europe.loc[europe_joined.index_right.unique()]
+        scale = 1
         fig, ax = plt.subplots(
-            figsize=(14, 12),
+            figsize=(14*scale, 12*scale),
             subplot_kw={
                 "projection": ccrs.PlateCarree(central_longitude=10),
                 "frameon": False,
@@ -468,11 +467,13 @@ def hotspot_maps(
         )
         ax.set_extent([-15, 32, 34, 72], crs=ccrs.PlateCarree())
         subst_name = subst.replace(":", "")
-        logger.info(f"Saving map to {save_path / f"appendix_hotspot_{subst_name}.pdf"}")
+        logger.info(f"Saving map to {save_path / f"appendix_hotspot_{subst_name}.jpg"}")
         plt.savefig(
-            save_path / f"appendix_hotspot_{subst_name}.pdf",
+            save_path / f"appendix_hotspot_{subst_name}.jpg",
+            dpi = 300,
             bbox_inches="tight",
             pad_inches=0.02,
+            transparent=False
         )
         plt.close(fig)
     logger.info("--- Finished plotting hotspot maps ---")
@@ -481,6 +482,7 @@ def hotspot_maps(
 def main() -> None:
     input_path = Path("data/input/")
     gdf: gpd.GeoDataFrame = gpd.read_file(input_path.joinpath("pfas_data.gpkg"))
+    # print(gdf.crs)
     # gdf = gpd.read_file(input_path.joinpath("pfas_data.gpkg"))
     basins: gpd.GeoDataFrame = gpd.read_file(
         input_path.joinpath("hybas_eu_lev04_v1c.shp")
