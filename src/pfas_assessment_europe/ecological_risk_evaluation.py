@@ -244,7 +244,7 @@ def ere_dual_plot(pivot, pivot_fraction, save_path: Path) -> None:
         bbox_to_anchor=(0.5, -0.40),
         ncol=5,
         labels=[
-            "Unknown risk (< LOD)",
+            "Unknown risk (< LOQ)",
             "Negligible risk",
             "Low risk",
             "Medium risk",
@@ -328,7 +328,7 @@ def ere_single_plot(pivot, save_path: Path) -> None:
         bbox_to_anchor=(0.5, -0.4),
         ncol=3,
         labels=[
-            "Unknown risk (< LOD)",
+            "Unknown risk (< LOQ)",
             "Negligible risk",
             "Low risk",
             "Medium risk",

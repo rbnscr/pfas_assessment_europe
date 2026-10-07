@@ -17,13 +17,14 @@ from pathlib import (
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+from openpyxl.styles import Font
 
 from pfas_assessment_europe.concentration_ratios import (
     boxplot_ratios,
     test_significant_difference,
 )
 
-# from pfas_assessment_europe.constants import HYBAS_RIVER_RENAME
+from pfas_assessment_europe.constants import ratio_substances
 
 logger = logging.getLogger(__name__)
 
@@ -118,25 +119,12 @@ def create_supplementary_table(
     gdf_joined_pivot_wide = gdf_joined_pivot.join(geom)
 
     # Define substances for ratio analysis
-    subst_for_bp_rat = [
-        ("PFNA", "PFDA"),
-        ("PFUnDA", "PFDoDA"),
-        ("PFTrDA", "PFTeDA"),
-        ("PFBA", "PFBS"),
-        ("PFPeA", "PFPeS"),
-        ("PFHxA", "PFHxS"),
-        ("PFHpA", "PFHpS"),
-        ("PFOA", "PFOS"),
-        ("PFNA", "PFNS"),
-        ("PFDA", "PFDS"),
-        ("PFUnDA", "PFUnDS"),
-        ("PFDoDA", "PFDoDS"),
-        ("PFTrDA", "PFTrDS"),
-    ]
+    subst_for_bp_rat = ratio_substances
+    ratio_substances_expanded = ratio_substances + [(y, x) for x, y in ratio_substances]
 
-    df_ratios = boxplot_ratios(df=gdf_joined_pivot_wide, substances=subst_for_bp_rat)
+    df_ratios = boxplot_ratios(df=gdf_joined_pivot_wide, substances=ratio_substances)
     df_greater = test_significant_difference(
-        df=gdf_joined_pivot_wide, substances=subst_for_bp_rat
+        df=gdf_joined_pivot_wide, substances=ratio_substances_expanded
     )
     df_greater = df_greater[["comparison", "n", "stat_wilc", "p_value_wilc"]]
     df_greater = df_greater.rename(
@@ -160,7 +148,7 @@ def create_supplementary_table(
 
     # Define ratio order
     ratio_order = []
-    for sub1, sub2 in subst_for_bp_rat:
+    for sub1, sub2 in ratio_substances:
         ratio_name = f"{sub1}/{sub2}"
         if ratio_name in count_ratios.columns:
             ratio_order.append(ratio_name)
@@ -351,8 +339,8 @@ def create_supplementary_table(
     substance_stats_new = substance_stats_new.reindex(sort)
     logger.info("Computing Substance stats done")
 
-    logger.info("Computing PNEC and LOD sheets")
-    # Create LOD and PNEC tables
+    logger.info("Computing PNEC and LOQ sheets")
+    # Create LOQ and PNEC tables
     advisory_val = {
         "PFBA": 4400,
         "PFNA": 0.44,
@@ -390,13 +378,13 @@ def create_supplementary_table(
         "DONA" : 1746.02
     }
 
-    res_lod = []
+    res_loq = []
     for subst in sorted(gdf_timeframe.substance.unique()):
         gdf_tf_less_sub = gdf_timeframe_less[gdf_timeframe_less.substance == subst]
         raw_num = np.nan
         if subst in advisory_val.keys():
             raw_num = advisory_val[subst]
-        res_lod.append(
+        res_loq.append(
             {
                 "Substance": subst,
                 "Minimum (ng/L)": gdf_tf_less_sub.conc.min(),
@@ -411,9 +399,9 @@ def create_supplementary_table(
             }
         )
 
-    df_res_lod = pd.DataFrame(res_lod)
-    df_res_lod = df_res_lod.set_index("Substance")
-    df_res_lod = df_res_lod.rename(
+    df_res_loq = pd.DataFrame(res_loq)
+    df_res_loq = df_res_loq.set_index("Substance")
+    df_res_loq = df_res_loq.rename(
         index={
             "L_PFBS": "Linear PFBS",
             "L_PFHpS": "Linear PFHpS",
@@ -423,10 +411,10 @@ def create_supplementary_table(
         }
     )
 
-    df_res_pnec = df_res_lod["PNEC (ng/L)"].dropna().copy()
-    df_res_lod = df_res_lod.drop(columns="PNEC (ng/L)")
+    df_res_pnec = df_res_loq["PNEC (ng/L)"].dropna().copy()
+    df_res_loq = df_res_loq.drop(columns="PNEC (ng/L)")
 
-    logger.info("PNEC and LOD computation done")
+    logger.info("PNEC and LOQ computation done")
     logger.info("'Sum of 20 PFAS' dependency of number of included substances computation")
     pfas_sum = [
             "PFBA",
@@ -502,32 +490,32 @@ def create_supplementary_table(
         {
             "file": df_greater,
             "sheet": "Wilcoxon test",
-            "cap": "Results from Wilcoxon statistical test of PFAS concentrations",
+            "cap": "Results from one-sided, paired Wilcoxon signed-rank test of PFAS concentrations",
         },
         # {
         #     "file": counts_display_country_new,
         #     "sheet": "Country statistics",
-        #     "cap": "Counts of samples resulting in detected or non-detected PFAS per country and the respective detection frequency. Time period: 2019-2025.",
+        #     "cap": "Counts of samples resulting in detected or non-detected PFAS per country and the respective detection frequency. Time period: 2019-2026.",
         # },
         # {
         #     "file": counts_display_basin_new,
         #     "sheet": "Basin statistics",
-        #     "cap" : "Counts of samples resulting in detected or non-detected PFAS per basin and the respective detection frequency. Time period: 2019-2025."
+        #     "cap" : "Counts of samples resulting in detected or non-detected PFAS per basin and the respective detection frequency. Time period: 2019-2026."
         # },
         {
             "file": substance_stats_new,
             "sheet": "Substance statistics",
-            "cap": "General statistics of the used PFAS dataset collection. Concentrations in ng/L. Time period: 2019-2025. For abbreviations refer to Table A.1.",
+            "cap": "General statistics of the used PFAS dataset collection. Concentrations in ng/L. Time period: 2019-2026. For abbreviations refer to Table A.1.",
         },
         {
             "file": df_res_pnec,
             "sheet": "PNEC",
-            "cap": "Predicted no-effect concentrations (PNEC) of respective substances.",
+            "cap": "Predicted no-effect concentrations (PNEC) of respective substances as used in this study. In the NORMAN Database, PNEC of PFBA is given as 0.0044 ng/L, which was adjusted in our study.",
         },
         {
-            "file": df_res_lod,
-            "sheet": "LOD",
-            "cap": "Inferred minimum and maximum limits of detectability / quantification for 2019 - 2025.",
+            "file": df_res_loq,
+            "sheet": "LOQ",
+            "cap": "Inferred minimum and maximum limits of quantification and counts of the respective limits for 2019-2026.",
         },
         {
             "file": df_pfas_sum_dependency,
@@ -599,6 +587,7 @@ def create_supplementary_table(
         readme = writer.book["README"] 
         readme.column_dimensions["A"].width = 20 
         readme.column_dimensions["B"].width = 100
+        
 
         writer.book["Ratio counts"].column_dimensions["A"].width = 25
         for sheet in ["B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"]:
@@ -633,10 +622,11 @@ def create_supplementary_table(
         writer.book["PNEC"].column_dimensions["A"].width = 15
         writer.book["PNEC"].column_dimensions["B"].width = 15
 
-        writer.book["LOD"].column_dimensions["A"].width = 15
-        writer.book["LOD"].column_dimensions["B"].width = 15
-        writer.book["LOD"].column_dimensions["C"].width = 15
-        writer.book["LOD"].column_dimensions["D"].width = 15
+        writer.book["LOQ"].column_dimensions["A"].width = 15
+        writer.book["LOQ"].column_dimensions["B"].width = 15
+        writer.book["LOQ"].column_dimensions["C"].width = 15
+        writer.book["LOQ"].column_dimensions["D"].width = 15
+        writer.book["LOQ"].column_dimensions["E"].width = 15
 
         writer.book["PFAS20 dependency"].column_dimensions["A"].width = 20
         writer.book["PFAS20 dependency"].column_dimensions["B"].width = 30
@@ -647,11 +637,21 @@ def create_supplementary_table(
 
         writer.book["PCAFA"].column_dimensions["A"].width = 10
         writer.book["PCAFA"].column_dimensions["B"].width = 75
-        for sheet in ["C", "D", "E", "F"]:
-            writer.book["PCAFA"].column_dimensions[sheet].width = 14
-        for sheet in [ "G", "H", "I", "J"]:
-            writer.book["PCAFA"].column_dimensions[sheet].width = 22
+        for col in ["C", "D", "E", "F"]:
+            writer.book["PCAFA"].column_dimensions[col].width = 14
+        for col in [ "G", "H", "I", "J"]:
+            writer.book["PCAFA"].column_dimensions[col].width = 22
         writer.book["PCAFA"].column_dimensions["K"].width = 30
+
+        for sheet_name in writer.book.sheetnames:
+            if sheet_name != "README":
+                writer.book[sheet_name]["A1"].font = Font(bold=True)
+            if sheet_name == "Wilcoxon test":
+                ws = writer.book[sheet_name]
+                for cell in ws["D"]:
+                    if isinstance(cell.value, (int, float)) and cell.value < 0.05:
+                        cell.font = Font(bold=True)
+
     logger.info("Finished Excel file")
 
 

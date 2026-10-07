@@ -18,7 +18,7 @@ from scipy.stats import (
     ttest_rel,
     wilcoxon,
 )
-from pfas_assessment_europe.constants import HYBAS_RIVER_RENAME
+from pfas_assessment_europe.constants import ratio_substances
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,7 @@ def test_significant_difference(df: pd.DataFrame, substances: list[tuple]):
             stat_wilc, p_wilc = wilcoxon(
                 df_[sub1],
                 df_[sub2],
-                alternative="greater",  # One-sided test, because we have reasonal suspicion, that PFCA are higher. Wilcoxon, because of paired observations
+                alternative="greater",  # One-sided test, because we have reasonal suspicion, that the first substances are higher. Wilcoxon, because of paired observations.
             )
             stat_tt, p_tt = ttest_rel(
                 np.log10(df_[sub1]), np.log10(df_[sub2]), alternative="greater"
@@ -152,50 +152,50 @@ def conc_ratio(
     geom = gdf_joined.groupby("site")["basin"].first()
     pfas_wide = pfas_wide.join(geom)
 
-    subst_for_bp_rat = [
-        ("PFNA", "PFDA"),
-        ("PFUnDA", "PFDoDA"),
-        ("PFTrDA", "PFTeDA"),
-        ("PFBA", "PFBS"),
-        ("PFPeA", "PFPeS"),
-        ("PFHxA", "PFHxS"),
-        ("PFHpA", "PFHpS"),
-        ("PFOA", "PFOS"),
-        ("PFNA", "PFNS"),
-        ("PFDA", "PFDS"),
-        ("PFUnDA", "PFUnDS"),
-        ("PFDoDA", "PFDoDS"),
-        ("PFTrDA", "PFTrDS"),
-    ]
+    subst_for_bp_rat = ratio_substances
 
     df_ratios = boxplot_ratios(df=pfas_wide, substances=subst_for_bp_rat)
     df_greater = test_significant_difference(df=pfas_wide, substances=subst_for_bp_rat)
     # logger.info(df_greater)
 
-    logger.info(df_ratios.groupby("ratio")["value"].median())
+    logger.info(f"Median Ratio\n{df_ratios.groupby("ratio")["value"].median().to_string()}")
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    sns.boxplot(
-        data=df_ratios,
-        ax=ax,
-        x="ratio",
-        y="value",
-        flierprops={"marker": "x", "markersize": 1, "alpha": 1},
-        color="black",
-        linewidth=0.8,
-        boxprops=dict(facecolor="none", edgecolor="black"),
-        whiskerprops=dict(color="black", linewidth=0.8),
-        capprops=dict(color="black", linewidth=0.8),
-        medianprops=dict(color="black", linewidth=1.2),
-    )
-    ax.axhline(1, lw=0.5)
-    ax.set_ylabel("Concentration ratios (-)")
+    df_ratios["log_value"] = np.log10(df_ratios["value"])
+    # sns.boxplot(
+    #     data=df_ratios,
+    #     ax=ax,
+    #     x="ratio",
+    #     y="value",
+    #     flierprops={"marker": "x", "markersize": 1, "alpha": 1},
+    #     color="black",
+    #     linewidth=0.8,
+    #     boxprops=dict(facecolor="none", edgecolor="black"),
+    #     whiskerprops=dict(color="black", linewidth=0.8),
+    #     capprops=dict(color="black", linewidth=0.8),
+    #     medianprops=dict(color="black", linewidth=1.2),
+    # )
+    sns.violinplot(
+            data=df_ratios,
+            ax=ax,
+            x="ratio",
+            y="log_value",
+            inner = "quart",
+            fill=False,
+            # split=True,
+            # cut=0,
+            linewidth=0.8,
+            color="black",
+        )
+    # ax.axhline(0, lw=0.5, color="k")
+    # ax.set_ylabel("Concentration ratio (-)")
+    ax.set_ylabel("log10(concentration ratio) (-)")
     ax.set_xlabel("Substances")
-    ax.set_yscale("log")
+    # ax.set_yscale("log")
     ax.tick_params(axis="x", rotation=90)
     ax.grid(axis="y", alpha=0.15, linewidth=0.6)
 
-    ax.axvline(x=2.5, color="k", linewidth=0.2)
+    # ax.axvline(x=2.5, color="k", linewidth=0.2)
 
     plt.tight_layout()
     plt.savefig(

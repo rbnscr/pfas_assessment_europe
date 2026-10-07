@@ -35,3 +35,45 @@ HYBAS_RIVER_RENAME = {
     2040018460: "Guadiana",
     2040018840: "Tagus"
 }
+
+ratio_substances = [
+    # ("PFNA", "PFDA"),
+    # ("PFUnDA", "PFDoDA"),
+    # ("PFTrDA", "PFTeDA"),
+    # ("PFBA", "PFBS"),
+    # ("PFPeA", "PFPeS"),
+    # ("PFHxA", "PFHxS"),
+    # ("PFHpA", "PFHpS"),
+    # ("PFOA", "PFOS"),
+    # ("PFNA", "PFNS"),
+    # ("PFDA", "PFDS"),
+    # ("PFUnDA", "PFUnDS"),
+    # ("PFDoDA", "PFDoDS"),
+    # ("PFTrDA", "PFTrDS"),
+
+    ("PFNA", "PFOA"),
+    ("PFUnDA", "PFDA"),
+    ("PFTrDA", "PFDoDA"),
+
+    ("PFPeA", "PFBS"),
+    ("PFHxA", "PFPeS"),
+    ("PFHpA", "PFHxS"),
+    ("PFOA", "PFHpS"),
+    ("PFNA", "PFOS"),
+    ("PFDA", "PFNS"),
+    ("PFUnDA", "PFDS"),
+    ("PFDoDA", "PFUnDS"),
+    ("PFTrDA", "PFDoDS"),
+    ("PFTeDA", "PFTrDS"),
+
+    # ("PFBS", "PFPeA"),
+    # ("PFPeS", "PFHxA"),
+    # ("PFHxS", "PFHpA"),
+    # ("PFHpS", "PFOA"),
+    # ("PFOS", "PFNA"),
+    # ("PFNS", "PFDA"),
+    # ("PFDS", "PFUnDA"),
+    # ("PFUnDS", "PFDoDA"),
+    # ("PFDoDS", "PFTrDA"),
+    # ("PFTrDS", "PFTeDA"),
+]

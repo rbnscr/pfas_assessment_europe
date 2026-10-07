@@ -541,7 +541,7 @@ def full_pca_analysis(
             }
         )
 
-    logger.info(f"Minium cumulative variance explained: {report_sum_expl_min}")
+    logger.info(f"Minimum cumulative variance explained: {report_sum_expl_min}")
     logger.info(f"Maximum cumulative variance explained: {report_sum_expl_max}")
     logger.info(f"Maximum third component across groups: {report_third_comp_max}")
     logger.info(f"Maximum absolute factor correlation across groups: {report_max_corr:.3f}")
@@ -573,7 +573,7 @@ def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
     groups = [
         {
             "substances": ["PFPeA", "PFHxA", "PFHpA"],
-            "label": "Factor 1: Short-chain PFCAs",
+            "label": "Fingerprint 1: Short-chain PFCAs",
             "color": "red",
             "text_x_offset": 14,
         },
@@ -588,7 +588,7 @@ def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
         },
         {
             "substances": ["PFOS", "PFHxS"],
-            "label": "Factor 2: Long-chain PFSAs",
+            "label": "Fingerprint 2: Long-chain PFSAs",
             "text_x_offset" : 14,
             "color": "red",
         },
@@ -603,20 +603,20 @@ def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
         },
         {
             "substances": ["PFBA", "PFBS"],
-            "label": "Factor 3: Short-chain PFAAs",
+            "label": "Fingerprint 3: Short-chain PFAAs",
             "color": "red",
             "text_x_offset": 14,
         },
         {
             "substances": ["PFNA", "PFDA"],
-            "label": "Factor 4: Long-chain PFCAs",
+            "label": "Fingerprint 4: Long-chain PFCAs",
             "color": "red",
             "text_x_offset": 14,
             "text_y_offset": -0.5,
         },
         {
             "substances": ["PFOS", "PFHxS", "PFDA", "PFNA"],
-            "label": "Occasional co-loading of \nFactor 2 and 4 substances",
+            "label": "Occasional co-loading of \nFingerprint 2 and 4 substances",
             "color": "black",
             "text_x_offset": 14,
             "text_y_offset": -0.5,
