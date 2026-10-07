@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pfas_assessment_europe"
-description = " "
+description = "This repository contains the analysis code and supporting information for the accompanying research paper on PFAS concentrations in monitoring data from across Europe. The code processes geospatial PFAS concentration data, applies the filters and calculations described in the manuscript, and produces summary results in Excel format and Figures."
 version = "0.0.1"
 
 dependencies = [

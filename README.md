@@ -2,7 +2,7 @@
 
 [![ORCID](https://img.shields.io/badge/ORCID-0000--0002--9155--2753-A6CE39?logo=orcid&logoColor=white)](https://orcid.org/0000-0002-9155-2753)
 
-Code for: *Title of your research paper*
+Code for: *Fingerprinting PFAS pollution in European surface waters*
 
 The version associated with the manuscript is archived on Zenodo: 
 
@@ -12,7 +12,7 @@ The preprint is available at:
 
 This repository contains the analysis code and supporting information for the accompanying research paper on PFAS concentrations in monitoring data from across Europe.
 
-The code processes geospatial PFAS concentration data, applies the filters and calculations described in the manuscript, and produces summary results in Excel format and Figures. The Excel format output can be modified to any preferred non-proprietary file format.
+The code processes geospatial PFAS concentration data, applies the filters and calculations described in the manuscript, and produces summary results in Excel format and Figures. The Excel output can be modified to any preferred non-proprietary file format.
 
 The repository is intended to support transparency and reproducibility of the research findings. It should be read alongside the associated manuscript.
 
@@ -98,7 +98,7 @@ Install the project and its dependencies from the repository root:
 pip install .
 ```
 
-The projects' dependencies are defined in `pyproject.toml`.
+The projects' dependencies are defined in `pyproject.toml` and are automatically installed.
 
 ### 4. Prepare the input data
 
@@ -116,9 +116,7 @@ Before running the analysis, check that:
 Run the analysis script using the command-line entry point as defined in `pyproject.toml`:
 
 ```bash
-run-pfas-analysis \
--I <path_to_input_file_directory> \
--O <path_to_output_directory>
+run-pfas-analysis -I data/input -O results
 ```
 
 Alternatively, `make` can be used by running:
@@ -129,7 +127,7 @@ make analysis
 
 Here, `data/input` and `results` are predefined as input and output paths.
 
-The analysis should create an Excel workbook as well as Figures in the designated output directory. The exact filename and location are determined by the output path defined in the analysis script. Additionally, a log file is create in a `logs` directory.
+The analysis should create an Excel workbook as well as Figures in the designated output directory. The exact filename and location are determined by the output path defined in the analysis script. Additionally, a log file is created in a `logs` directory.
 
 ## Input data directory
 
@@ -138,18 +136,18 @@ Following files must be present in the `data/input` directory before execution o
 | File name                | Description                                                                   | Reference                                           |
 | ------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------- |
 | `pfas_data.parquet`      | Parquet-file containing daily PFAS concentration data                         | [PFAS concentration data](#pfas-concentration-data) |
-| `hybas_eu_lev04_v1c.shp` | ShapeFile containing catchment delineations (level 04) (Lehner & Grill, 2013) | [References](#references)                           |
-| `hybas_eu_lev12_v1c.shp` | ShapeFile containing catchment delineations (level 12) (Lehner & Grill, 2013) | [References](#references)                           |
+| `hybas_eu_lev04_v1c.shp` | Shapefile containing catchment delineations (level 04) (Lehner & Grill, 2013) | [References](#references)                           |
+| `hybas_eu_lev12_v1c.shp` | Shapefile containing catchment delineations (level 12) (Lehner & Grill, 2013) | [References](#references)                           |
 
 ### PFAS concentration data
 
-The file `pfas_data.parquet` contains daily PFAS concentration data compiled from monitoring sites across Europe. The dataset is compiled from existing compilations, research data, and data from authoritive sources. Since dynamic datasets were used, which are regularly updated, we provide a snapshot of the used dataset in `data/dataset_generation.zip`. The compilation process is documented in the executable notebook `compilation_of_dataset.ipynb` in the `scripts` folder. Licensing information and doi of the respective datasets are provided in `licence-mapping.toml`. For the creation of `pfas_data.parquet` following files are also needed to be placed in `data/dataset_generation/auxiliary`:
+The file `pfas_data.parquet` contains daily PFAS concentration data compiled from monitoring sites across Europe. The dataset is compiled from existing compilations, research data, and data from authoritative sources. Since dynamic datasets were used, which are regularly updated, we provide a snapshot of the used dataset in `data/dataset_generation.zip`. The compilation process is documented in the executable notebook `compilation_of_dataset.ipynb` in the `scripts` folder. Licensing information and doi of the respective datasets are provided in `licence-mapping.toml`. For the creation of `pfas_data.parquet` following files are also needed to be placed in `data/dataset_generation/auxiliary`:
 
 | File name                      | Description                                                                   | Reference                                                             |
 | ------------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | `ne_10m_admin_0_countries.shp` | Country shape file (v5.1.1) by Natural Earth (n.d.)                           | [Website](https://www.naturalearthdata.com) [References](#references) |
-| `hybas_eu_lev01_v1c.shp`       | ShapeFile containing catchment delineations (level 01) (Lehner & Grill, 2013) | [References](#references)                                             |
-| `hybas_eu_lev04_v1c.shp`       | ShapeFile containing catchment delineations (level 04) (Lehner & Grill, 2013) | [References](#references)                                             |
+| `hybas_eu_lev01_v1c.shp`       | Shapefile containing catchment delineations (level 01) (Lehner & Grill, 2013) | [References](#references)                                             |
+| `hybas_eu_lev04_v1c.shp`       | Shapefile containing catchment delineations (level 04) (Lehner & Grill, 2013) | [References](#references)                                             |
 
 
 The compiled dataset, i.e. `pfas_data.parquet` is readily provided in `data/input`. The compilation is described in the original research article.
@@ -157,29 +155,29 @@ The compiled dataset, i.e. `pfas_data.parquet` is readily provided in `data/inpu
 
 The file contains information including:
 
-| Field                    | Type         | Description                                                                                                                                                                      |
-| ------------------------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lat`                    | `float64`    | Latitude                                                                                                                                                                         |
-| `lon`                    | `float64`    | Longitude                                                                                                                                                                        |
-| `name`                   | `str`        | Name of the location                                                                                                                                                             |
-| `country`                | `str`        | Country, inferred from lat/lon                                                                                                                                                   |
-| `source_type`            | `str`        | Source of the respective measurement: 'Authorities', 'Scientific article', oder 'Journalism investigation'                                                                       |
-| `data_collection_method` | `str`        | How the data was obtained                                                                                                                                                        |
-| `source_text`            | `str`        | see https://pdh.cnrs.fr/en/data_format/                                                                                                                                          |
-| `source_url`             | `str`        | see https://pdh.cnrs.fr/en/data_format/                                                                                                                                          |
-| `dataset_id`             | `str`        | see https://pdh.cnrs.fr/en/data_format/                                                                                                                                          |
-| `dataset_name`           | `str`        | Hints at the original dataset. See `licence-mapping.toml` for details. Dataset from the PFAS_DataHub retained their original dataset_name (see https://pdh.cnrs.fr/en/datasets/) |
-| `matrix`                 | `str`        | Sampling matrix: here only "surface water"                                                                                                                                       |
-| `date`                   | `datetime64` | Date of sampling                                                                                                                                                                 |
-| `year`                   | `int64`      | Sampling year, inferred from date                                                                                                                                                |
-| `geometry`               | `geometry`   | Spatial location of the observation (EPSG:4326)                                                                                                                                  |
-| `substance`              | `string`     | PFAS substance name                                                                                                                                                              |
-| `unit`                   | `str`        | Unit of the concentration (harmonised to ng/L)                                                                                                                                   |
-| `less_than`              | `boolean`    | Indicator for observations below the reporting or detection limit. `True` equals observations below the limit.                                                                   |
-| `cas_id`                 | `str`        | CAS Registry Number                                                                                                                                                              |
-| `conc`                   | `float64`    | Measured concentration in ng/L                                                                                                                                                   |
-| `basin`                  | `str`        | Basin name derived from major rivers in a given level 04 basin                                                                                                                   |
-| `HYBAS_ID04`             | `float64`    | HydroBASIN ID of level 04 basins (see Shapefiles section)                                                                                                                        |
+| Field                    | Type                 | Description                                                                                                                                                                      |
+| ------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lat`                    | `float64`            | Latitude                                                                                                                                                                         |
+| `lon`                    | `float64`            | Longitude                                                                                                                                                                        |
+| `name`                   | `str`                | Name of the location                                                                                                                                                             |
+| `country`                | `str`                | Country, inferred from lat/lon                                                                                                                                                   |
+| `source_type`            | `str`                | Source of the respective measurement: 'Authorities', 'Scientific article', or 'Journalism investigation'                                                                         |
+| `data_collection_method` | `str`                | How the data was obtained                                                                                                                                                        |
+| `source_text`            | `str`                | see https://pdh.cnrs.fr/en/data_format/                                                                                                                                          |
+| `source_url`             | `str`                | see https://pdh.cnrs.fr/en/data_format/                                                                                                                                          |
+| `dataset_id`             | `str`                | see https://pdh.cnrs.fr/en/data_format/                                                                                                                                          |
+| `dataset_name`           | `str`                | Hints at the original dataset. See `licence-mapping.toml` for details. Dataset from the PFAS_DataHub retained their original dataset_name (see https://pdh.cnrs.fr/en/datasets/) |
+| `matrix`                 | `str`                | Sampling matrix: here only "surface water"                                                                                                                                       |
+| `date`                   | `datetime64`         | Date of sampling                                                                                                                                                                 |
+| `year`                   | `int64`              | Sampling year, inferred from date                                                                                                                                                |
+| `geometry`               | `GeoPandas geometry` | Spatial location of the observation (CRS: EPSG:4326)                                                                                                                             |
+| `substance`              | `string`             | PFAS substance name                                                                                                                                                              |
+| `unit`                   | `str`                | Unit of the concentration (harmonised to ng/L)                                                                                                                                   |
+| `less_than`              | `boolean`            | Indicator for observations below the reporting or detection limit. `True` equals observations below the limit.                                                                   |
+| `cas_id`                 | `str`                | CAS Registry Number                                                                                                                                                              |
+| `conc`                   | `float64`            | Measured concentration in ng/L                                                                                                                                                   |
+| `basin`                  | `str`                | Basin name derived from major rivers in a given level 04 basin                                                                                                                   |
+| `HYBAS_ID04`             | `float64`            | HydroBASIN ID of level 04 basins (see Shapefiles section)                                                                                                                        |
 
 
 Most fields are adopted from the PFAS datahub (Cordner, 2024). The PFAS datahub provides a `country` field, which we decided to re-compute during the analysis to apply one consistent method.
@@ -216,3 +214,10 @@ Cordner, A., Brown, P., Cousins, I. T., Scheringer, M., Martinon, L., Dagorn, G.
 Lehner, B., & Grill, G. (2013). Global river hydrography and network routing: Baseline data and new approaches to study the world’s large river systems. Hydrological Processes, 27(15), 2171–2186. <https://doi.org/10.1002/hyp.9740>
 
 Natural Earth. (n.d.). *Natural Earth vector data, 1:10m scale* (Version 5.1.1) [Dataset]. Retrieved April 23, 2026, from [www.naturalearthdata.com](https://doi.org/www.naturalearthdata.com)
+
+
+## Licence
+
+See `MIT license` for software.
+
+**Dataset licensing and reuse:** `pfas_data.parquet` combines data from multiple sources. The applicable reuse terms and attribution requirements for each source are listed in `licence-mapping.toml`. The repository’s MIT license applies to the code only. It does not change the terms of the source data. Please consult the listed source terms before reusing or redistributing data.

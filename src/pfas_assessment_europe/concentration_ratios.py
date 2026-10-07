@@ -182,21 +182,15 @@ def conc_ratio(
             y="log_value",
             inner = "quart",
             fill=False,
-            # split=True,
-            # cut=0,
             linewidth=0.8,
             color="black",
         )
-    # ax.axhline(0, lw=0.5, color="k")
     # ax.set_ylabel("Concentration ratio (-)")
     ax.set_ylabel("log10(concentration ratio) (-)")
     ax.set_xlabel("Substances")
     # ax.set_yscale("log")
     ax.tick_params(axis="x", rotation=90)
     ax.grid(axis="y", alpha=0.15, linewidth=0.6)
-
-    # ax.axvline(x=2.5, color="k", linewidth=0.2)
-
     plt.tight_layout()
     plt.savefig(
         save_path / "appendix_boxplot_concentration_ratios.pdf", bbox_inches="tight"
