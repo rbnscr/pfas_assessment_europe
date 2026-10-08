@@ -2,8 +2,6 @@ src/pfas_assessment_europe/factor_analysis4d.py
 
 results/
 logs/
-CITATION.cff
-CITATION.md
 
 data/dataset_generation/*
 data/input/*

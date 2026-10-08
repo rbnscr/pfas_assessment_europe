@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+title: PFAS assessment in European surface waters
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Robin
+    family-names: Schröder
+    email: robin.schroeder@hydrology.ruhr-uni-bochum.de
+    affiliation: Ruhr University Bochum
+    orcid: 'https://orcid.org/0000-0002-9155-2753'
+repository-code: 'https://github.com/rbnscr/pfas_assessment_europe'
+abstract: >-
+  This repository contains the analysis code and supporting
+  information for the accompanying research paper on PFAS
+  concentrations in monitoring data from across Europe. The
+  code processes geospatial PFAS concentration data, applies
+  the filters and calculations described in the manuscript,
+  and produces summary results in Excel format and Figures.
+keywords:
+  - European PFAS monitoring
+  - surface-water contamination
+  - PFAS co-occurrence
+license: MIT
+version: 1.0.0
+date-released: '2026-10-08'
+identifiers:
+  - description: This is the archived snapshot of the code and data associated with the preprint and original manuscript
+    type: doi
+    value: "10.5281/zenodo.23240788"
