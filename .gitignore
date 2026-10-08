@@ -5,10 +5,12 @@ logs/
 CITATION.cff
 CITATION.md
 
+data/dataset_generation/*
 data/input/*
 .vscode/
 
-!data/input/pfas_data.parquet
+!data/input.zip
+!data/dataset_generation.zip
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -2,15 +2,9 @@
 
 [![ORCID](https://img.shields.io/badge/ORCID-0000--0002--9155--2753-A6CE39?logo=orcid&logoColor=white)](https://orcid.org/0000-0002-9155-2753)
 
-Code for: *Fingerprinting PFAS pollution in European surface waters*
+Code and data for: *Fingerprinting PFAS pollution in European surface waters*
 
-The version associated with the manuscript is archived on Zenodo: 
-
-The version associated with the preprint is archived on Zenodo: 
-
-The preprint is available at: 
-
-This repository contains the analysis code and supporting information for the accompanying research paper on PFAS concentrations in monitoring data from across Europe.
+This repository contains the analysis code and data for the accompanying research paper on PFAS concentrations in monitoring data from across Europe.
 
 The code processes geospatial PFAS concentration data, applies the filters and calculations described in the manuscript, and produces summary results in Excel format and Figures. The Excel output can be modified to any preferred non-proprietary file format.
 
@@ -207,6 +201,12 @@ The same applies to any other shapesfiles.
 
 Please refer to the original data source and the References section for the relevant metadata and licensing information.
 
+## Licence
+
+See `MIT license` for software.
+
+**Dataset licensing and reuse:** `pfas_data.parquet` combines data from multiple sources. The applicable reuse terms and attribution requirements for each source are listed in `licence-mapping.toml`. The repository’s MIT license applies to the code only. It does not change the terms of the source data. Please consult the listed source terms before reusing or redistributing data.
+
 ## References
 
 Cordner, A., Brown, P., Cousins, I. T., Scheringer, M., Martinon, L., Dagorn, G., Aubert, R., Hosea, L., Salvidge, R., Felke, C., Tausche, N., Drepper, D., Liva, G., Tudela, A., Delgado, A., Salvatore, D., Pilz, S., & Horel, S. (2024). PFAS Contamination in Europe: Generating Knowledge and Mapping Known and Likely Contamination with “Expert-Reviewed” Journalism. *Environmental Science & Technology*, *58*(15), 6616–6627. [https://doi.org/10.1021/acs.est.3c09746](https://doi.org/10.1021/acs.est.3c09746)
@@ -214,10 +214,3 @@ Cordner, A., Brown, P., Cousins, I. T., Scheringer, M., Martinon, L., Dagorn, G.
 Lehner, B., & Grill, G. (2013). Global river hydrography and network routing: Baseline data and new approaches to study the world’s large river systems. Hydrological Processes, 27(15), 2171–2186. <https://doi.org/10.1002/hyp.9740>
 
 Natural Earth. (n.d.). *Natural Earth vector data, 1:10m scale* (Version 5.1.1) [Dataset]. Retrieved April 23, 2026, from [www.naturalearthdata.com](https://doi.org/www.naturalearthdata.com)
-
-
-## Licence
-
-See `MIT license` for software.
-
-**Dataset licensing and reuse:** `pfas_data.parquet` combines data from multiple sources. The applicable reuse terms and attribution requirements for each source are listed in `licence-mapping.toml`. The repository’s MIT license applies to the code only. It does not change the terms of the source data. Please consult the listed source terms before reusing or redistributing data.

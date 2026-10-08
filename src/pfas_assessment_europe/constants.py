@@ -65,15 +65,4 @@ ratio_substances = [
     ("PFDoDA", "PFUnDS"),
     ("PFTrDA", "PFDoDS"),
     ("PFTeDA", "PFTrDS"),
-
-    # ("PFBS", "PFPeA"),
-    # ("PFPeS", "PFHxA"),
-    # ("PFHxS", "PFHpA"),
-    # ("PFHpS", "PFOA"),
-    # ("PFOS", "PFNA"),
-    # ("PFNS", "PFDA"),
-    # ("PFDS", "PFUnDA"),
-    # ("PFUnDS", "PFDoDA"),
-    # ("PFDoDS", "PFTrDA"),
-    # ("PFTrDS", "PFTeDA"),
 ]

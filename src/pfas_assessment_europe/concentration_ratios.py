@@ -118,11 +118,11 @@ def conc_ratio(
 
     The function calculates median PFAS concentrations per sampling event,
     computes concentration ratios for predefined PFAS pairs, performs paired
-    statistical tests, and saves a boxplot and heatmap as PDF files.
+    statistical tests, and saves a violinplot and heatmap as PDF files.
 
     The generated files are:
 
-    - ``appendix_boxplot_concentration_ratios.pdf``
+    - ``appendix_violinplot_concentration_ratios.pdf``
     - ``appendix_heatmap_concentration_ratios.pdf``
 
     Only observations from years after 2018 and observations not marked as
@@ -193,7 +193,7 @@ def conc_ratio(
     ax.grid(axis="y", alpha=0.15, linewidth=0.6)
     plt.tight_layout()
     plt.savefig(
-        save_path / "appendix_boxplot_concentration_ratios.pdf", bbox_inches="tight"
+        save_path / "appendix_violinplot_concentration_ratios.pdf", bbox_inches="tight"
     )
 
     plt.close(fig)

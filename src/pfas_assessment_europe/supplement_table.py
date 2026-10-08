@@ -528,7 +528,6 @@ def create_supplementary_table(
             "cap": "Group definitions, test statistics and results from the PCA/FA.",
         },
     ]
-    # table_numbers = ["B.1", "B.2", "B.3", "B.4", "B.5", "B.6"] 
 
     table_numbers = [f"B.{i}" for i in range(1, len(dict_to_excel) + 1)]
 
@@ -536,7 +535,7 @@ def create_supplementary_table(
 
     metadata = {
         "Title" : ["Supplementary Information B","Fingerprinting PFAS pollution in European surface waters"],
-        "Authors" : ["Robin Schröder\u1d43", "Tobias Licha\u1d47","Martina Flörke\u1d43"],
+        "Authors" : ["Robin Schröder\u1d43", "Martina Flörke\u1d43", "Jens Prothmann\u1d47", "Tobias Licha\u1d47"],
         "Affiliations": ["\u1d43 Engineering Hydrology and Water Resources Management, Faculty of Civil and Environmental Engineering, Ruhr University Bochum, Universitätsstraße 150, 44801 Bochum, Germany","\u1d47 Institute of Geology, Mineralogy & Geophysics, Dept. Hydrogeology and Environmental Geology, Ruhr University Bochum, Universitätsstraße 150, 44801 Bochum, Germany"],
         "Contents": table_list,
         "Contact" : "robin.schroeder@hydrology.ruhr-uni-bochum.de" 

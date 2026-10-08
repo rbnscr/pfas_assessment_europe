@@ -44,6 +44,7 @@ def cluster(df, max_dist):
     # all done, print outcome
     logger.info(f'Clustered {len(df):,} points down to {num_clusters} clusters, for {100*(1 - float(num_clusters) / len(df)):.2f}% compression.')
     return df
+# End of 'cluster' function
 
 def general_info(gdf_timeframe, save_path: Path):
     """Generate summary statistics and plots for PFAS monitoring data.

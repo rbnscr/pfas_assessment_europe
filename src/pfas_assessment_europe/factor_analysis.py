@@ -892,12 +892,6 @@ def factor_analysis(
         are saved to ``save_path``.
     """
     logger.info("--- Starting Factor Analysis ---")
-    # lev04_rename = HYBAS_RIVER_RENAME
-    # id_name = "HYBAS_ID"
-    # basins[id_name] = basins[id_name].astype("object")
-    # basins.loc[~basins[id_name].isin(lev04_rename.keys()), id_name] = "Other"
-    # basins[id_name] = basins[id_name].replace(lev04_rename)
-    # basins[id_name] = basins[id_name].astype("string")
     id_name = "basin"
     groups_dict = {
         "A": ["PFBA", "PFBS", "PFHpA", "PFHxS", "PFHxA", "PFOA", "PFOS", "PFPeA"],
@@ -947,18 +941,6 @@ def factor_analysis(
             "PFPeA",
             "PFPeS",#
         ],
-        # "A05": [
-        #     "PFBA",
-        #     "PFBS",
-        #     "PFHpA",
-        #     "PFHxS",
-        #     "PFHxA",
-        #     "PFOA",
-        #     "PFOS",
-        #     "PFPeA",
-        #     "PFNA",#
-        #     "PFPeS",#
-        # ],
         "A5": [
             "PFBA",
             "PFBS",
@@ -1003,17 +985,6 @@ def factor_analysis(
             "PFPeA",
             "FOSA",#
         ],        
-        # "A08": [
-        #     "PFBA",
-        #     "PFBS",
-        #     "PFHpA",
-        #     "PFHxS",
-        #     "PFHxA",
-        #     "PFOA",
-        #     "PFOS",
-        #     "PFPeA",
-        #     "HFPO-DA",#
-        # ],
         "B": [
             "PFOA", 
             "PFOS", 
@@ -1024,83 +995,9 @@ def factor_analysis(
             "PFHpS"#
             ],
         "C":["N-MeFOSAA", "PFBS", "PFHpA", "PFHxA", "PFHxS", "PFOA", "PFOS", "PFPeA"], # N-MeFOSAA
-        # "C1":["6:2 FTS", "EtFOSAA", "FOSA", "L_PFOS", "N-MeFOSAA", "PFPeS"],
-        # "D":["6:2 FTS", "EtFOSAA", "FOSA", "L_PFOS", "N-MeFOSAA", "PFPeS"], # EtFOSAA
         "D":["EtFOSAA", "PFBA", "PFBS", "PFHpA", "PFHxA", "PFHxS", "PFOA", "PFPeA"],
-        # "E": ["DONA", "PFBA", "PFHxA", "PFOA", "PFOS", "PFPeA"], # DONA
         "E":["DONA", "PFBA", "PFHpA", "PFHxA", "PFOA", "PFOS", "PFPeA"],
-        # "F":["6:2 FTS","8:2 FTS", "EtFOSAA", "L_PFOS", "N-MeFOSAA", "PFPeS"], # 8:2 FTS
-        # "F1":["6:2 FTS", "8:2 FTS", "EtFOSAA", "FOSA", "L_PFOS", "N-MeFOSAA", "PFPeS"],
-        # "C": [
-        #     # "L_PFBS",
-        #     # "L_PFHxS",
-        #     "L_PFOS",
-        #     "PFBA",
-        #     "PFDA",
-        #     "PFHpA",
-        #     "PFHxA",
-        #     "PFNA",
-        #     "PFOA",
-        #     "PFPeA",
-        #     "PFPeS",
-        # ],
-        # "D": [
-        #     "EtFOSAA",
-        #     # "L_PFBS",
-        #     # "L_PFHxS",
-        #     "L_PFOS",
-        #     "PFBA",
-        #     "PFDA",
-        #     "PFHpA",
-        #     "PFHxA",
-        #     "PFNA",
-        #     "PFOA",
-        #     "PFPeA",
-        #     "PFPeS",
-        # ],
-        # "E": [
-        #     "EtFOSAA",
-        #     "FOSA",
-        #     "N-MeFOSAA",
-        #     # "L_PFBS",
-        #     # "L_PFHxS",
-        #     "L_PFOS",
-        #     "PFBA",
-        #     "PFDA",
-        #     "PFHpA",
-        #     "PFHxA",
-        #     "PFNA",
-        #     "PFOA",
-        #     "PFPeA",
-        #     "PFPeS",
-        # ],
-        # "F": ["FOSA", "L_PFOS", "PFBA", "PFOA", "PFHpA", "PFHxA", "PFPeA", "PFPeS"],
-        # "G": [
-        #     "EtFOSAA",
-        #     "FOSA",
-        #     "L_PFOS",
-        #     "PFBA",
-        #     "PFOA",
-        #     "PFHpA",
-        #     "PFHxA",
-        #     "PFPeA",
-        #     "PFPeS",
-        # ],
-        # "H": ["PFBA", "PFBS", "PFHpA", "PFHxA", "PFOA", "PFOS", "PFPeA", "TFA"],
         "F": ["PFBA", "PFOS", "PFHxS", "PFOA", "PFHxA", "PFPeA", "PFHpA", "TFA"], #TFA
-        # "I": [
-        #     # "L_PFHpS",
-        #     "PFNA",
-        #     # "L_PFBS",
-        #     "L_PFOS",
-        #     "PFDA",
-        #     "PFPeS",
-        #     # "L_PFHxS",
-        #     "PFBA",
-        #     "PFHpA",
-        #     "PFOA",
-        #     "PFPeA",
-        # ],
         "G": ["PFDA", "PFHpA", "PFHxA", "PFHxS", "PFNA", "PFOA", "PFPeA", "PFPeS"]
     }
     cluster_results, report_results = full_pca_analysis(
