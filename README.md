@@ -18,7 +18,7 @@ The analysis requires:
 
 - Python 3.13 or later
 - The input data files described below
-- Sufficient disk space for the input data and generated outputs
+- Sufficient disk space for the input data and generated outputs (approx. 1 GB)
 
 The analysis has been developed for execution from the root directory of this repository.
 
@@ -143,9 +143,7 @@ The file `pfas_data.parquet` contains daily PFAS concentration data compiled fro
 | `hybas_eu_lev01_v1c.shp`       | Shapefile containing catchment delineations (level 01) (Lehner & Grill, 2013) | [References](#references)                                             |
 | `hybas_eu_lev04_v1c.shp`       | Shapefile containing catchment delineations (level 04) (Lehner & Grill, 2013) | [References](#references)                                             |
 
-
 The compiled dataset, i.e. `pfas_data.parquet` is readily provided in `data/input`. The compilation is described in the original research article.
-
 
 The file contains information including:
 
@@ -205,7 +203,7 @@ Please refer to the original data source and the References section for the rele
 
 See `MIT license` for software.
 
-**Dataset licensing and reuse:** `pfas_data.parquet` combines data from multiple sources. The applicable reuse terms and attribution requirements for each source are listed in `licence-mapping.toml`. The repository’s MIT license applies to the code only. It does not change the terms of the source data. Please consult the listed source terms before reusing or redistributing data.
+**Dataset licensing and reuse:** `pfas_data.parquet` combines data from multiple sources. Information on licensing for each source are listed in `licence-mapping.toml`. The repository’s MIT license applies to the code only. It does not change the terms of the source data. Please consult the listed source terms before reusing or redistributing data.
 
 ## References
 
