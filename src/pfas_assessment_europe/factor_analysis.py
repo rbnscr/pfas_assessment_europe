@@ -554,7 +554,9 @@ def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
         "TFA", "PFBA", "PFPeA", "PFHxA", "PFHpA", "PFOA", "PFNA", "PFDA",
         "PFUnDA", "PFDoDA", "PFTrDA", "PFTeDA", "PFHxDA", "PFODA",
         "PFBS", "PFPeS", "PFHxS", "PFHpS", "PFOS", "PFNS", "PFDS",
-        "PFUnDS", "PFDoDS", "PFTrDS", "Linear PFOA", "Linear PFOS", "6:2 FTCA", "4:2 FTS",
+        "PFUnDS", "PFDoDS", "PFTrDS", 
+        # "Linear PFOA", "Linear PFOS", 
+        "6:2 FTCA", "4:2 FTS",
         "6:2 FTS", "8:2 FTS", "HFPO-DA", "DONA", "FOSA", "N-Et-FOSA",
         "N-MeFOSAA", "EtFOSAA",
     ]
@@ -565,7 +567,7 @@ def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
         "PFOA", "PFBA", "PFBS", 
         "PFDA", "PFNA",
         "PFOS", "PFHxS", "PFPeS", "PFHpS", 
-        "Linear PFOA", "Linear PFOS"
+        # "Linear PFOA", "Linear PFOS"
     ]
 
     # Each group must be contiguous in the displayed order for its rectangle
@@ -575,13 +577,13 @@ def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
             "substances": ["PFPeA", "PFHxA", "PFHpA"],
             "label": "Fingerprint 1: Short-chain PFCAs",
             "color": "red",
-            "text_x_offset": 14,
+            "text_x_offset": 13,
         },
         {
             "substances": ["PFPeA", "PFHxA", "PFHpA", "PFOA", "PFBA"],
             "label": "Occasional co-loading of \nshort- and long-chain PFCAs",
             "color": "black",
-            "text_x_offset": 14,
+            "text_x_offset": 13,
             "text_y_offset": 0.5,
             "linestyle" : "--",
             "linewidth" : 1
@@ -589,14 +591,14 @@ def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
         {
             "substances": ["PFOS", "PFHxS"],
             "label": "Fingerprint 2: Long-chain PFSAs",
-            "text_x_offset" : 14,
+            "text_x_offset" : 13,
             "color": "red",
         },
         {
             "substances": ["PFOS", "PFHxS", "PFPeS", "PFHpS"],
             "label": "Co-loading of \nshort- and long-chain PFSAs",
             "color": "black",
-            "text_x_offset": 14,
+            "text_x_offset": 13,
             "text_y_offset": 0.5,
             "linestyle" : "--",
             "linewidth" : 1
@@ -605,20 +607,20 @@ def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
             "substances": ["PFBA", "PFBS"],
             "label": "Fingerprint 3: Short-chain PFAAs",
             "color": "red",
-            "text_x_offset": 14,
+            "text_x_offset": 13,
         },
         {
             "substances": ["PFNA", "PFDA"],
             "label": "Fingerprint 4: Long-chain PFCAs",
             "color": "red",
-            "text_x_offset": 14,
+            "text_x_offset": 13,
             "text_y_offset": -0.5,
         },
         {
             "substances": ["PFOS", "PFHxS", "PFDA", "PFNA"],
             "label": "Occasional co-loading of \nFingerprint 2 and 4 substances",
             "color": "black",
-            "text_x_offset": 14,
+            "text_x_offset": 13,
             "text_y_offset": -0.5,
             "linestyle" : "--",
             "linewidth" : 1
@@ -626,15 +628,17 @@ def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
     ]
 
     # Normalize names such as L_PFOA to Linear PFOA.
-    normalized_results = [
-        {
-            key.replace("L_", "Linear ", 1) if key.startswith("L_") else key: value
-            for key, value in record.items()
-        }
-        for record in cluster_results
-    ]
+    # normalized_results = [
+    #     {
+    #         key.replace("L_", "Linear ", 1) if key.startswith("L_") else key: value
+    #         for key, value in record.items()
+    #     }
+    #     for record in cluster_results
+    # ]
 
-    present_features = {feature for record in normalized_results for feature in record}
+    # present_features = {feature for record in normalized_results for feature in record}
+
+    present_features = {feature for record in cluster_results for feature in record}
 
     # Requested order first, then the original preferred order, then any
     # remaining features alphabetically.
@@ -655,7 +659,8 @@ def plot_consensus_matrix(cluster_results, save_path: Path) -> None:
     co_mat = np.zeros((n, n), dtype=float)
     co_run_count = np.zeros((n, n), dtype=float)
 
-    for record in normalized_results:
+    # for record in normalized_results:
+    for record in cluster_results:
         present = [feature for feature in record if feature in idx]
 
         for fi in present:
@@ -907,19 +912,19 @@ def factor_analysis(
             "PFNA", #
             "PFDA",#
         ],
+        # "A2": [
+        #     "PFBA",
+        #     "PFBS",
+        #     "PFHpA",
+        #     "PFHxS",
+        #     "PFHxA",
+        #     "PFOA",
+        #     "PFOS",
+        #     "PFPeA",
+        #     "L_PFOS",#
+        #     "L_PFOA",#
+        # ],
         "A2": [
-            "PFBA",
-            "PFBS",
-            "PFHpA",
-            "PFHxS",
-            "PFHxA",
-            "PFOA",
-            "PFOS",
-            "PFPeA",
-            "L_PFOS",#
-            "L_PFOA",#
-        ],
-        "A3": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -930,7 +935,7 @@ def factor_analysis(
             "PFPeA",
             "6:2 FTS",#
         ],
-        "A4": [
+        "A3": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -941,7 +946,7 @@ def factor_analysis(
             "PFPeA",
             "PFPeS",#
         ],
-        "A5": [
+        "A4": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -952,7 +957,7 @@ def factor_analysis(
             "PFPeA",
             "PFDA"#
         ],
-        "A6": [
+        "A5": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -963,7 +968,7 @@ def factor_analysis(
             "PFPeA",
             "PFNA",#
         ],
-        "A7": [
+        "A6": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -974,7 +979,7 @@ def factor_analysis(
             "PFPeA",
             "HFPO-DA",#
         ],
-        "A8": [
+        "A7": [
             "PFBA",
             "PFBS",
             "PFHpA",
@@ -1038,10 +1043,10 @@ def main() -> None:
 
     # factor_analysis(gdf_dropped, basins, save_path) 
     file_path = Path("cluster_results.pkl")
-    # with file_path.open("rb") as f:
-    #     cluster_results = pickle.load(f)
-    plot_consensus_matrix(cluster_results, save_path)
+    with file_path.open("rb") as f:
+        cluster_results = pickle.load(f)
+    plot_consensus_matrix(cluster_results, save_path) # pyright: ignore[reportUndefinedVariable]
 
 
 if __name__ == "__main__":
-    main()
+    main() # Nothing really happens here, unless there is a pickled cluster_results file. Use the run_analysis script.

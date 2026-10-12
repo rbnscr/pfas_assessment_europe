@@ -296,11 +296,11 @@ def create_supplementary_table(
         "PFUnDS",
         "PFDoDS",
         "PFTrDS",
-        "Linear PFOA",
+        # "Linear PFOA",
         # "Linear PFBS",
         # "Linear PFHpS",
         # "Linear PFHxS",
-        "Linear PFOS",
+        # "Linear PFOS",
         "6:2 FTCA",
         "4:2 FTS",
         "6:2 FTS",
@@ -327,15 +327,15 @@ def create_supplementary_table(
             "max": "Maximum",
         }
     ).set_index("Substance")
-    substance_stats_new = substance_stats_new.rename(
-        index={
-            "L_PFBS": "Linear PFBS",
-            "L_PFHpS": "Linear PFHpS",
-            "L_PFHxS": "Linear PFHxS",
-            "L_PFOA": "Linear PFOA",
-            "L_PFOS": "Linear PFOS",
-        }
-    )
+    # substance_stats_new = substance_stats_new.rename(
+    #     index={
+    #         "L_PFBS": "Linear PFBS",
+    #         "L_PFHpS": "Linear PFHpS",
+    #         "L_PFHxS": "Linear PFHxS",
+    #         "L_PFOA": "Linear PFOA",
+    #         "L_PFOS": "Linear PFOS",
+    #     }
+    # )
     substance_stats_new = substance_stats_new.reindex(sort)
     logger.info("Computing Substance stats done")
 
@@ -388,29 +388,22 @@ def create_supplementary_table(
             {
                 "Substance": subst,
                 "Minimum (ng/L)": gdf_tf_less_sub.conc.min(),
-                "Minimum n (-)": len(
-                    gdf_tf_less_sub[gdf_tf_less_sub.conc == gdf_tf_less_sub.conc.min()]
-                ),
                 "Maximum (ng/L)": gdf_tf_less_sub.conc.max(),
-                "Maximum n (-)": len(
-                    gdf_tf_less_sub[gdf_tf_less_sub.conc == gdf_tf_less_sub.conc.max()]
-                ),
                 "PNEC (ng/L)": raw_num,
             }
         )
 
     df_res_loq = pd.DataFrame(res_loq)
     df_res_loq = df_res_loq.set_index("Substance")
-    df_res_loq = df_res_loq.rename(
-        index={
-            "L_PFBS": "Linear PFBS",
-            "L_PFHpS": "Linear PFHpS",
-            "L_PFHxS": "Linear PFHxS",
-            "L_PFOA": "Linear PFOA",
-            "L_PFOS": "Linear PFOS",
-        }
-    )
-
+    # df_res_loq = df_res_loq.rename(
+    #     index={
+    #         "L_PFBS": "Linear PFBS",
+    #         "L_PFHpS": "Linear PFHpS",
+    #         "L_PFHxS": "Linear PFHxS",
+    #         "L_PFOA": "Linear PFOA",
+    #         "L_PFOS": "Linear PFOS",
+    #     }
+    # )
     df_res_pnec = df_res_loq["PNEC (ng/L)"].dropna().copy()
     df_res_loq = df_res_loq.drop(columns="PNEC (ng/L)")
 
@@ -515,7 +508,7 @@ def create_supplementary_table(
         {
             "file": df_res_loq,
             "sheet": "LOQ",
-            "cap": "Inferred minimum and maximum limits of quantification and counts of the respective limits for 2019-2026.",
+            "cap": "Inferred minimum and maximum limits of quantification of the respective substances for 2019-2026.",
         },
         {
             "file": df_pfas_sum_dependency,
@@ -535,8 +528,8 @@ def create_supplementary_table(
 
     metadata = {
         "Title" : ["Supplementary Information B","Fingerprinting PFAS pollution in European surface waters"],
-        "Authors" : ["Robin Schröder\u1d43", "Martina Flörke\u1d43", "Jens Prothmann\u1d47", "Tobias Licha\u1d47"],
-        "Affiliations": ["\u1d43 Engineering Hydrology and Water Resources Management, Faculty of Civil and Environmental Engineering, Ruhr University Bochum, Universitätsstraße 150, 44801 Bochum, Germany","\u1d47 Institute of Geology, Mineralogy & Geophysics, Dept. Hydrogeology and Environmental Geology, Ruhr University Bochum, Universitätsstraße 150, 44801 Bochum, Germany"],
+        "Authors" : ["Robin Schröder\u1d43", "Jens Prothmann\u1d47", "Tobias Licha\u1d47", "Hans H. Dürr\u1d43", "Martina Flörke\u1d43"],
+        "Affiliations": ["\u1d43 Engineering Hydrology and Water Resources Management, Faculty of Civil and Environmental Engineering, Ruhr University Bochum, Universitätsstraße 150, 44801 Bochum, Germany","\u1d47 Hydrogeochemistry & Hydrogeology, Institute of Geosciences, Ruhr University Bochum, Ruhr University Bochum, Universitätsstraße 150, 44801 Bochum, Germany"],
         "Contents": table_list,
         "Contact" : "robin.schroeder@hydrology.ruhr-uni-bochum.de" 
     }
@@ -624,8 +617,6 @@ def create_supplementary_table(
         writer.book["LOQ"].column_dimensions["A"].width = 15
         writer.book["LOQ"].column_dimensions["B"].width = 15
         writer.book["LOQ"].column_dimensions["C"].width = 15
-        writer.book["LOQ"].column_dimensions["D"].width = 15
-        writer.book["LOQ"].column_dimensions["E"].width = 15
 
         writer.book["PFAS20 dependency"].column_dimensions["A"].width = 20
         writer.book["PFAS20 dependency"].column_dimensions["B"].width = 30
@@ -635,7 +626,7 @@ def create_supplementary_table(
 
 
         writer.book["PCAFA"].column_dimensions["A"].width = 10
-        writer.book["PCAFA"].column_dimensions["B"].width = 75
+        writer.book["PCAFA"].column_dimensions["B"].width = 65
         for col in ["C", "D", "E", "F"]:
             writer.book["PCAFA"].column_dimensions[col].width = 14
         for col in [ "G", "H", "I", "J"]:

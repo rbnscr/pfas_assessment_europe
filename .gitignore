@@ -1,10 +1,13 @@
 src/pfas_assessment_europe/factor_analysis4d.py
 
+scripts/exploration.ipynb
+
 results/
 logs/
 
 data/dataset_generation/*
 data/input/*
+data/archive/*
 .vscode/
 
 !data/input.zip

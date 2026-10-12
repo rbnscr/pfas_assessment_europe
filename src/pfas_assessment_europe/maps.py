@@ -280,15 +280,15 @@ def hotspot_maps(
     logger.info("Start plotting Hotspot maps")
     gdf_dropped = gdf[~gdf["less_than"]].copy()
     df_plot = gdf_dropped[["substance", "conc"]].copy()
-    df_plot["substance"] = df_plot["substance"].replace(
-        {
-            "L_PFBS": "Linear PFBS",
-            "L_PFHxS": "Linear PFHxS",
-            "L_PFHpS": "Linear PFHpS",
-            "L_PFOS": "Linear PFOS",
-            "L_PFOA": "Linear PFOA",
-        }
-    )
+    # df_plot["substance"] = df_plot["substance"].replace(
+    #     {
+    #         "L_PFBS": "Linear PFBS",
+    #         "L_PFHxS": "Linear PFHxS",
+    #         "L_PFHpS": "Linear PFHpS",
+    #         "L_PFOS": "Linear PFOS",
+    #         "L_PFOA": "Linear PFOA",
+    #     }
+    # )
     stats = df_plot.groupby(["substance"]).agg(
         # nmeas=("conc", "count"),
         # median=("conc", "median"),

@@ -24,27 +24,9 @@ import seaborn as sns
 from matplotlib.ticker import (
     FuncFormatter,
 )
-from sklearn.cluster import DBSCAN
 
 
 logger = logging.getLogger(__name__)
-
-# 'cluster' function adapted from the PFAS DataHub https://colab.research.google.com/drive/1AL9Jw3AzcIpbhckIr2B0zEnc5NQ8nP9Z#scrollTo=lzMKd6HWOdAU 
-def cluster(df, max_dist):
-    df = df.copy()
-    kms_per_radian = 6371.0088
-    eps_rad = max_dist / kms_per_radian
-    # represent points consistently as (lat, lon) and convert to radians to fit using haversine metric
-    coords = df[['lat', 'lon']].values
-    db = DBSCAN(eps=eps_rad, min_samples=1, algorithm='ball_tree', metric='haversine').fit(np.radians(coords))
-    cluster_labels = db.labels_
-    df['cluster_label'] = cluster_labels
-    num_clusters = len(set(cluster_labels))
-
-    # all done, print outcome
-    logger.info(f'Clustered {len(df):,} points down to {num_clusters} clusters, for {100*(1 - float(num_clusters) / len(df)):.2f}% compression.')
-    return df
-# End of 'cluster' function
 
 def general_info(gdf_timeframe, save_path: Path):
     """Generate summary statistics and plots for PFAS monitoring data.
@@ -80,15 +62,15 @@ def general_info(gdf_timeframe, save_path: Path):
     counts["total_n"] = counts["Below"] + counts["Above"]
     counts["frequency"] = counts["Above"] / counts["total_n"] * 100
     counts = counts.sort_values(by="frequency", ascending=False)
-    counts = counts.rename(
-        index={
-            "L_PFBS": "Linear PFBS",
-            "L_PFHxS": "Linear PFHxS",
-            "L_PFHpS": "Linear PFHpS",
-            "L_PFOS": "Linear PFOS",
-            "L_PFOA": "Linear PFOA",
-        }
-    )
+    # counts = counts.rename(
+    #     index={
+    #         "L_PFBS": "Linear PFBS",
+    #         "L_PFHxS": "Linear PFHxS",
+    #         "L_PFHpS": "Linear PFHpS",
+    #         "L_PFOS": "Linear PFOS",
+    #         "L_PFOA": "Linear PFOA",
+    #     }
+    # )
 
     start_year_tf = gdf_timeframe.year.min()
     end_year_tf = gdf_timeframe.year.max()
@@ -104,10 +86,6 @@ def general_info(gdf_timeframe, save_path: Path):
     logger.info(f"Number of site: {n_loc_full_tf:,}")
     logger.info(fr"Samples above LOD: {n_quant_meas_full_tf:,} ({n_quant_meas_full_tf/n_meas_full_tf*100:.1f}~\%)")
     logger.info(f"Number of sites with samples over LOD: {n_loc_meas_full_tf:,}")
-
-    # On the PFAS Data Hub website is stated, that counting each individual coordinate as sampling location leads to an overestimation of the sampling. They show an example of clustering using K-MEANS, with a 200m minimal distance between 2 clusters
-    df_cluster = gdf_timeframe.drop_duplicates(subset=['lat', 'lon'])
-    clustered = cluster(df_cluster, max_dist=0.2)
 
     gdf_timeframe_dropped = gdf_timeframe[~gdf_timeframe.less_than]
     df_plot = gdf_timeframe_dropped[["substance", "conc"]]
@@ -209,15 +187,15 @@ def general_info(gdf_timeframe, save_path: Path):
     count = ((df_plot["substance"] == "TFA") & (df_plot["conc"] > 9000)).sum()
     logger.info("Number of TFA > 9,000 ng/L: %d", count)
 
-    df_plot["substance"] = df_plot["substance"].replace(
-        {
-            "L_PFBS": "Linear PFBS",
-            "L_PFHxS": "Linear PFHxS",
-            "L_PFHpS": "Linear PFHpS",
-            "L_PFOS": "Linear PFOS",
-            "L_PFOA": "Linear PFOA",
-        }
-    )
+    # df_plot["substance"] = df_plot["substance"].replace(
+    #     {
+    #         "L_PFBS": "Linear PFBS",
+    #         "L_PFHxS": "Linear PFHxS",
+    #         "L_PFHpS": "Linear PFHpS",
+    #         "L_PFOS": "Linear PFOS",
+    #         "L_PFOA": "Linear PFOA",
+    #     }
+    # )
     logger.info("Substance/Group Median:")
     logger.info(df_plot.groupby('substance')['conc'].median())
     logger.info("Substance/Group Mean:")
@@ -310,8 +288,8 @@ def combined_plot(df_plot, counts, geom_counts, save_path: Path) -> None:
         "PFUnDS",
         "PFDoDS",
         "PFTrDS",
-        "Linear PFOA",
-        "Linear PFOS",
+        # "Linear PFOA",
+        # "Linear PFOS",
         "6:2 FTCA",
         "4:2 FTS",
         "6:2 FTS",
