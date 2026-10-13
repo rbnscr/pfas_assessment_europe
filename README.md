@@ -4,7 +4,7 @@
 
 Code and data for: *Fingerprinting PFAS pollution in European surface waters*
 
-The version associated with the preprint is archived on Zenodo: [![DOI](https://zenodo.org/badge/1354562936.svg)](https://doi.org/10.5281/zenodo.23240787)
+The version associated with the preprint is archived on Zenodo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23321966.svg)](https://doi.org/10.5281/zenodo.23321966)
 
 This repository contains the analysis code and data for the accompanying research paper on PFAS concentrations in monitoring data from across Europe.
 

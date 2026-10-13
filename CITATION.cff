@@ -29,3 +29,6 @@ identifiers:
   - description: This is the archived snapshot of the code and data (v1.0.0).
     type: doi
     value: "10.5281/zenodo.23240788"
+  - description: This is the archived snapshot that was used in the manuscript and preprint of the code and data (v1.0.1).
+    type: doi
+    value: "10.5281/zenodo.23321966"
