@@ -529,7 +529,7 @@ def create_supplementary_table(
     metadata = {
         "Title" : ["Supplementary Information B","Fingerprinting PFAS pollution in European surface waters"],
         "Authors" : ["Robin Schröder\u1d43", "Jens Prothmann\u1d47", "Tobias Licha\u1d47", "Hans H. Dürr\u1d43", "Martina Flörke\u1d43"],
-        "Affiliations": ["\u1d43 Engineering Hydrology and Water Resources Management, Faculty of Civil and Environmental Engineering, Ruhr University Bochum, Universitätsstraße 150, 44801 Bochum, Germany","\u1d47 Hydrogeochemistry & Hydrogeology, Institute of Geosciences, Ruhr University Bochum, Ruhr University Bochum, Universitätsstraße 150, 44801 Bochum, Germany"],
+        "Affiliations": ["\u1d43 Engineering Hydrology and Water Resources Management, Faculty of Civil and Environmental Engineering, Ruhr University Bochum, Universitätsstraße 150, 44801 Bochum, Germany","\u1d47 Hydrogeochemistry & Hydrogeology, Institute of Geosciences, Ruhr University Bochum, Universitätsstraße 150, 44801 Bochum, Germany"],
         "Contents": table_list,
         "Contact" : "robin.schroeder@hydrology.ruhr-uni-bochum.de" 
     }
